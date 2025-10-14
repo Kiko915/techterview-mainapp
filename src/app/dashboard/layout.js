@@ -202,11 +202,14 @@ function TopNavbar() {
 
         {/* Help */}
         <Button 
+          asChild
           size="sm" 
           className="bg-[#354fd2] text-white hover:bg-[#2a3fa8] transition-colors"
         >
-          <HelpCircle className="h-4 w-4 mr-2" />
-          Help
+          <Link href="/help">
+            <HelpCircle className="h-4 w-4 mr-2" />
+            Help
+          </Link>
         </Button>
 
         {/* User Avatar Dropdown */}

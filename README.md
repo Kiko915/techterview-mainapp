@@ -1,36 +1,124 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# 🚀 TechTerview
 
-## Getting Started
+A comprehensive interview preparation platform designed to help tech professionals ace their technical interviews with confidence.
 
-First, run the development server:
+## 🌟 Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **📚 Interview Preparation**: Comprehensive resources for technical interviews
+- **🎨 Dark/Light Theme**: Toggle between themes for comfortable studying
+- **👤 User Dashboard**: Personalized experience with account management
+- **🔐 Authentication System**: Secure login, signup, and password recovery
+- **⚙️ Settings Panel**: Customize your experience with theme preferences
+- **📱 Responsive Design**: Works seamlessly across all devices
+- **🎯 Onboarding Flow**: Guided setup for new users
+- **❓ Help & Support**: Comprehensive help documentation
+- **📋 Legal Pages**: Privacy policy and terms of service
+
+## 🛠️ Tech Stack
+
+- **Framework**: [Next.js 15.5.4](https://nextjs.org/) with App Router
+- **Frontend**: React 19.1.0
+- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
+- **UI Components**: [Radix UI](https://www.radix-ui.com/)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **Build Tool**: Turbopack for faster development
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18+ installed
+- npm, yarn, pnpm, or bun package manager
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Kiko915/techterview-mainapp.git
+   cd techterview-webapp
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   # or
+   yarn install
+   # or
+   pnpm install
+   # or
+   bun install
+   ```
+
+3. Run the development server:
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   # or
+   pnpm dev
+   # or
+   bun dev
+   ```
+
+4. Open [http://localhost:3000](http://localhost:3000) in your browser to see the app.
+
+## 📁 Project Structure
+
+```
+src/
+├── app/                    # Next.js App Router pages
+│   ├── auth/              # Authentication pages
+│   │   ├── login/         # Login page
+│   │   ├── signup/        # Registration page
+│   │   └── forgot-password/ # Password recovery
+│   ├── dashboard/         # User dashboard
+│   │   ├── account/       # Account management
+│   │   └── settings/      # User settings
+│   ├── onboarding/        # New user onboarding
+│   ├── help/              # Help documentation
+│   ├── privacy/           # Privacy policy
+│   ├── terms/             # Terms of service
+│   └── page.js            # Landing page
+├── components/            # Reusable components
+│   └── ui/                # UI component library
+├── contexts/              # React contexts
+│   └── ThemeContext.js    # Theme management
+└── hooks/                 # Custom React hooks
+    └── useTheme.js        # Theme hook
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🎨 Theme Support
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+TechTerview includes a built-in theme system that supports:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Light Mode**: Clean, bright interface for daytime use
+- **Dark Mode**: Easy on the eyes for extended study sessions
+- **System Preference**: Automatically matches your OS theme
+- **Persistent Settings**: Your theme choice is remembered
 
-## Learn More
+## 🔧 Available Scripts
 
-To learn more about Next.js, take a look at the following resources:
+- `npm run dev` - Start development server with Turbopack
+- `npm run build` - Build the application for production
+- `npm run start` - Start the production server
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🤝 Contributing
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+We welcome contributions to TechTerview! Please feel free to:
 
-## Deploy on Vercel
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 📄 License
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is private and proprietary. All rights reserved.
+
+## 🆘 Support
+
+If you encounter any issues or have questions, please visit our [Help page](/help) or contact our support team.
+
+---
+
+**TechTerview** - Empowering your technical interview journey 💪

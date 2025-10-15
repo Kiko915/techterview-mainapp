@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/useAuth';
 import { getUserByUID } from '@/lib/firestore';
+import { Spinner } from '@/components/ui/spinner';
 
 export default function GuestGuard({ children }) {
   const { user, loading: authLoading } = useAuth();
@@ -52,9 +53,9 @@ export default function GuestGuard({ children }) {
   if (authLoading || (user && profileLoading)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+        <div className="text-center space-y-4">
+          <Spinner className="w-8 h-8 mx-auto text-primary" />
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     );

@@ -109,8 +109,19 @@ export default function AccountPage() {
       return;
     }
 
-    if (passwordData.newPassword.length < 6) {
-      toast.error("New password must be at least 6 characters long!");
+    if (passwordData.newPassword.length < 8) {
+      toast.error("New password must be at least 8 characters long!");
+      return;
+    }
+    
+    // Check password strength
+    const hasLowercase = /[a-z]/.test(passwordData.newPassword);
+    const hasUppercase = /[A-Z]/.test(passwordData.newPassword);
+    const hasNumbers = /\d/.test(passwordData.newPassword);
+    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(passwordData.newPassword);
+    
+    if (!hasLowercase || !hasUppercase || !hasNumbers) {
+      toast.error("Password must contain at least one lowercase letter, one uppercase letter, and one number!");
       return;
     }
 
@@ -133,8 +144,14 @@ export default function AccountPage() {
       console.error('Error updating password:', error);
       if (error.code === 'auth/wrong-password') {
         toast.error("Current password is incorrect.");
+      } else if (error.code === 'auth/weak-password') {
+        toast.error("The password is too weak. Please choose a stronger password.");
+      } else if (error.code === 'auth/requires-recent-login') {
+        toast.error("For security reasons, please log out and log back in before changing your password.");
+      } else if (error.code === 'auth/user-mismatch') {
+        toast.error("Authentication error. Please try logging out and back in.");
       } else {
-        toast.error("Failed to update password. Please try again.");
+        toast.error(`Failed to update password: ${error.message || 'Please try again.'}`);
       }
     } finally {
       setPasswordLoading(false);

@@ -18,15 +18,23 @@ export const uploadImageToCloudinary = async (file) => {
   }
 
   try {
+    // Check if environment variables are set
+    if (!process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME) {
+      throw new Error('Cloudinary cloud name is not configured');
+    }
+    if (!process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET) {
+      throw new Error('Cloudinary upload preset is not configured');
+    }
+
     const formData = new FormData();
     formData.append('file', file);
     formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET);
     formData.append('folder', 'techterview/profile-images'); // Optional: organize in folders
-    
-    // Add transformation parameters for optimization
-    formData.append('transformation', JSON.stringify([
-      { width: 400, height: 400, crop: 'fill', gravity: 'face', quality: 'auto' }
-    ]));
+
+    console.log('Uploading to:', CLOUDINARY_UPLOAD_URL);
+    console.log('Cloud name:', process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME);
+    console.log('Upload preset:', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET);
+    console.log('File details:', { name: file.name, size: file.size, type: file.type });
 
     const response = await fetch(CLOUDINARY_UPLOAD_URL, {
       method: 'POST',
@@ -35,7 +43,8 @@ export const uploadImageToCloudinary = async (file) => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error?.message || 'Failed to upload image');
+      console.error('Cloudinary error response:', errorData);
+      throw new Error(errorData.error?.message || `HTTP ${response.status}: Failed to upload image`);
     }
 
     const data = await response.json();
@@ -64,4 +73,21 @@ export const deleteImageFromCloudinary = async (publicId) => {
     console.error('Cloudinary delete error:', error);
     throw error;
   }
+};
+
+// Test function to verify Cloudinary configuration
+export const testCloudinaryConfig = () => {
+  console.log('=== Cloudinary Configuration Test ===');
+  console.log('Cloud Name:', process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME);
+  console.log('Upload Preset:', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET);
+  console.log('Upload URL:', `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`);
+  
+  const isConfigured = !!
+    process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME &&
+    process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+  
+  console.log('Configuration Status:', isConfigured ? '✅ Configured' : '❌ Missing variables');
+  console.log('=====================================');
+  
+  return isConfigured;
 };

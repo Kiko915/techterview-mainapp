@@ -20,7 +20,10 @@ From your Cloudinary Dashboard, copy the following:
    - **Preset name**: `techterview_profile_uploads` (or any name you prefer)
    - **Signing Mode**: `Unsigned` (for client-side uploads)
    - **Folder**: `techterview/profile-images` (optional, for organization)
-   - **Transformation**: Set max dimensions (e.g., 800x800)
+   - **Transformation** (recommended for profile images):
+     - Width: 400, Height: 400
+     - Crop: Fill
+     - Gravity: Face (for better face centering)
    - **Format**: Auto
    - **Quality**: Auto
    - **Access Control**: Public (for profile images)

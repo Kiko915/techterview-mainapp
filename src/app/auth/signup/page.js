@@ -3,11 +3,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Logo } from "@/components/ui/logo";
 import { Version } from "@/components/ui/version";
-import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Check, X } from "lucide-react";
+import { signUpWithEmail, signUpWithGoogle } from "@/lib/firebase";
+import { createUser } from "@/lib/firestore";
+import GuestGuard from "@/components/GuestGuard";
 
 export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -17,6 +21,68 @@ export default function SignupPage() {
     password: "",
     confirmPassword: ""
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
+  const router = useRouter();
+
+  // Password validation functions
+  const passwordRequirements = {
+    minLength: (password) => password.length >= 8,
+    hasUppercase: (password) => /[A-Z]/.test(password),
+    hasLowercase: (password) => /[a-z]/.test(password),
+    hasNumber: (password) => /\d/.test(password),
+    hasSpecialChar: (password) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+  };
+
+  const getPasswordValidation = (password) => {
+    return {
+      minLength: passwordRequirements.minLength(password),
+      hasUppercase: passwordRequirements.hasUppercase(password),
+      hasLowercase: passwordRequirements.hasLowercase(password),
+      hasNumber: passwordRequirements.hasNumber(password),
+      hasSpecialChar: passwordRequirements.hasSpecialChar(password)
+    };
+  };
+
+  const isPasswordValid = (password) => {
+    const validation = getPasswordValidation(password);
+    return Object.values(validation).every(Boolean);
+  };
+
+  // Convert Firebase error codes to user-friendly messages
+  const getFriendlyErrorMessage = (error) => {
+    const errorCode = error.code || error.message;
+    
+    switch (errorCode) {
+      case 'auth/email-already-in-use':
+        return 'An account with this email already exists. Please try logging in instead or use a different email.';
+      case 'auth/invalid-email':
+        return 'Please enter a valid email address.';
+      case 'auth/operation-not-allowed':
+        return 'Account creation is currently disabled. Please contact support.';
+      case 'auth/weak-password':
+        return 'Password is too weak. Please follow the security requirements shown above.';
+      case 'auth/network-request-failed':
+        return 'Network error. Please check your internet connection and try again.';
+      case 'auth/too-many-requests':
+        return 'Too many account creation attempts. Please wait a few minutes before trying again.';
+      case 'auth/popup-closed-by-user':
+        return 'Sign-up was cancelled. Please try again.';
+      case 'auth/popup-blocked':
+        return 'Pop-up was blocked by your browser. Please allow pop-ups for this site and try again.';
+      case 'auth/cancelled-popup-request':
+        return 'Sign-up was cancelled. Please try again.';
+      case 'auth/account-exists-with-different-credential':
+        return 'An account already exists with this email using a different sign-in method. Please try logging in with email/password instead.';
+      default:
+        // Check if it's a custom message we want to keep
+        if (error.message && !error.code) {
+          return error.message;
+        }
+        return 'Something went wrong during account creation. Please try again or contact support if the problem persists.';
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -26,20 +92,87 @@ export default function SignupPage() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle signup logic here
-    if (formData.password !== formData.confirmPassword) {
-      alert("Passwords don't match!");
+    setLoading(true);
+    setError("");
+    
+    // Validate password strength
+    if (!isPasswordValid(formData.password)) {
+      setError("Password does not meet the security requirements. Please ensure all requirements above are satisfied.");
+      setLoading(false);
       return;
     }
-    console.log("Signup attempt:", formData);
-    // After successful signup, redirect to onboarding
-    // window.location.href = '/onboarding';
+    
+    // Validate password confirmation
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords don't match. Please make sure both password fields are identical.");
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      const userCredential = await signUpWithEmail(formData.email, formData.password);
+      
+      // Create user profile in Firestore
+      await createUser({
+        uid: userCredential.user.uid,
+        email: formData.email,
+        displayName: formData.email.split('@')[0], // Use email prefix as initial display name
+        profileComplete: false,
+        onboardingCompleted: false
+      });
+      
+      // Redirect to onboarding
+      router.push("/onboarding");
+    } catch (error) {
+      console.error("Signup error:", error);
+      setError(getFriendlyErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignUp = async () => {
+    setLoading(true);
+    setError("");
+    
+    try {
+      const userCredential = await signUpWithGoogle();
+      
+      // Check if user already exists in our database
+      const { getUserByEmail } = await import('@/lib/firestore');
+      const existingUser = await getUserByEmail(userCredential.user.email);
+      
+      if (existingUser) {
+        // User already exists, sign them out and show error
+        await userCredential.user.delete(); // Delete the Firebase Auth account
+        setError('An account with this Google email already exists. Please use the login page instead.');
+        return;
+      }
+      
+      // Create user profile in Firestore (new user)
+      await createUser({
+        uid: userCredential.user.uid,
+        email: userCredential.user.email,
+        displayName: userCredential.user.displayName || userCredential.user.email.split('@')[0],
+        profileComplete: false,
+        onboardingCompleted: false
+      });
+      
+      // Redirect to onboarding
+      router.push("/onboarding");
+    } catch (error) {
+      console.error("Google sign-up error:", error);
+      setError(getFriendlyErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <GuestGuard>
+      <div className="min-h-screen bg-background flex">
       {/* Left Side - Hero Section */}
       <div className="hidden lg:flex lg:w-1/2 relative">
         <div className="absolute inset-4">
@@ -104,6 +237,12 @@ export default function SignupPage() {
               </h1>
             </div>
 
+            {error && (
+              <div className="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded text-sm">
+                {error}
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Email Field */}
               <div className="space-y-2">
@@ -137,6 +276,8 @@ export default function SignupPage() {
                     placeholder="••••••••••••••••••••"
                     value={formData.password}
                     onChange={handleInputChange}
+                    onFocus={() => setShowPasswordRequirements(true)}
+                    onBlur={() => setShowPasswordRequirements(false)}
                     className="pl-10 pr-10 h-12 bg-white border border-gray-200"
                     required
                   />
@@ -152,6 +293,40 @@ export default function SignupPage() {
                     )}
                   </button>
                 </div>
+                
+                {/* Password Requirements Indicator */}
+                {(showPasswordRequirements || formData.password) && (
+                  <div className="mt-3 p-3 bg-gray-50 rounded-md border text-xs">
+                    <p className="text-gray-600 mb-2 font-medium">Password must contain:</p>
+                    {(() => {
+                      const validation = getPasswordValidation(formData.password);
+                      return (
+                        <div className="space-y-1">
+                          <div className={`flex items-center gap-2 ${validation.minLength ? 'text-green-600' : 'text-gray-500'}`}>
+                            {validation.minLength ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                            <span>At least 8 characters</span>
+                          </div>
+                          <div className={`flex items-center gap-2 ${validation.hasUppercase ? 'text-green-600' : 'text-gray-500'}`}>
+                            {validation.hasUppercase ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                            <span>One uppercase letter (A-Z)</span>
+                          </div>
+                          <div className={`flex items-center gap-2 ${validation.hasLowercase ? 'text-green-600' : 'text-gray-500'}`}>
+                            {validation.hasLowercase ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                            <span>One lowercase letter (a-z)</span>
+                          </div>
+                          <div className={`flex items-center gap-2 ${validation.hasNumber ? 'text-green-600' : 'text-gray-500'}`}>
+                            {validation.hasNumber ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                            <span>One number (0-9)</span>
+                          </div>
+                          <div className={`flex items-center gap-2 ${validation.hasSpecialChar ? 'text-green-600' : 'text-gray-500'}`}>
+                            {validation.hasSpecialChar ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                            <span>One special character (!@#$%^&*)</span>
+                          </div>
+                        </div>
+                      );
+                    })()} 
+                  </div>
+                )}
               </div>
 
               {/* Confirm Password Field */}
@@ -187,9 +362,10 @@ export default function SignupPage() {
               {/* Sign Up Button */}
               <Button 
                 type="submit"
-                className="w-full h-12 bg-primary text-primary-foreground hover:bg-primary/90 rounded-md font-medium"
+                disabled={loading}
+                className="w-full h-12 bg-primary text-primary-foreground hover:bg-primary/90 rounded-md font-medium disabled:opacity-50"
               >
-                Sign Up
+                {loading ? "Creating account..." : "Sign Up"}
               </Button>
 
               {/* Divider */}
@@ -205,8 +381,10 @@ export default function SignupPage() {
               {/* Google Signup Button */}
               <Button 
                 type="button"
+                onClick={handleGoogleSignUp}
+                disabled={loading}
                 variant="outline"
-                className="w-full h-12 bg-white border border-gray-200 text-gray-900 hover:bg-gray-50 rounded-md font-medium shadow-sm"
+                className="w-full h-12 bg-white border border-gray-200 text-gray-900 hover:bg-gray-50 rounded-md font-medium shadow-sm disabled:opacity-50"
               >
                 <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -214,7 +392,7 @@ export default function SignupPage() {
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
-                Signup with Google
+Sign up with Google
               </Button>
 
               {/* Login Link */}
@@ -239,5 +417,6 @@ export default function SignupPage() {
         </div>
       </div>
     </div>
+    </GuestGuard>
   );
 }

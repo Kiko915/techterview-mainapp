@@ -1,8 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import AuthGuard from "@/components/AuthGuard";
+import { useAuth } from "@/lib/useAuth";
+import { getUserByUID } from "@/lib/firestore";
+import { logOut } from "@/lib/firebase";
 import Image from "next/image";
 import {
   Sidebar,
@@ -157,6 +161,35 @@ function AppSidebar() {
 
 function TopNavbar() {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const [userProfile, setUserProfile] = useState(null);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (user) {
+        try {
+          const profile = await getUserByUID(user.uid);
+          setUserProfile(profile);
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+        }
+      }
+    };
+
+    fetchUserProfile();
+  }, [user]);
+
+  const handleLogout = async () => {
+    try {
+      await logOut();
+      // User will be automatically redirected by AuthGuard
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
+
+  const userName = userProfile?.displayName || userProfile?.username || user?.email?.split('@')[0] || 'User';
+  const userInitials = userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   
   // Function to get page title based on current path
   const getPageTitle = () => {
@@ -217,9 +250,9 @@ function TopNavbar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="relative h-8 w-8 rounded-full">
               <Avatar className="h-8 w-8">
-                <AvatarImage src="/avatars/user.png" alt="User" />
+                <AvatarImage src={user?.photoURL} alt={userName} />
                 <AvatarFallback className="bg-[#354fd2] text-white text-sm">
-                  JD
+                  {userInitials}
                 </AvatarFallback>
               </Avatar>
             </Button>
@@ -227,8 +260,8 @@ function TopNavbar() {
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <div className="flex items-center justify-start gap-2 p-2">
               <div className="flex flex-col space-y-1 leading-none">
-                <p className="font-medium text-sm">John Doe</p>
-                <p className="text-xs text-gray-600">john.doe@example.com</p>
+                <p className="font-medium text-sm">{userName}</p>
+                <p className="text-xs text-gray-600">{user?.email}</p>
               </div>
             </div>
             <DropdownMenuSeparator />
@@ -239,7 +272,7 @@ function TopNavbar() {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-red-600 cursor-pointer">
+            <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer">
               <LogOut className="mr-2 h-4 w-4 text-red-400" />
               <span>Logout</span>
             </DropdownMenuItem>
@@ -252,14 +285,16 @@ function TopNavbar() {
 
 export default function DashboardLayout({ children }) {
   return (
-    <SidebarProvider className="min-h-screen">
-      <AppSidebar />
-      <SidebarInset className="flex flex-col flex-1">
-        <TopNavbar />
-        <main className="flex-1 overflow-auto bg-background p-6">
-          {children}
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+    <AuthGuard requireOnboarding={true}>
+      <SidebarProvider className="min-h-screen">
+        <AppSidebar />
+        <SidebarInset className="flex flex-col flex-1">
+          <TopNavbar />
+          <main className="flex-1 overflow-auto bg-background p-6">
+            {children}
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
+    </AuthGuard>
   );
 }

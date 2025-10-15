@@ -1,10 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronRight, ChevronLeft, User, UserCheck, IdCard } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ChevronRight, ChevronLeft, User, UserCheck, IdCard, AlertCircle, Check, X, Loader2 } from "lucide-react";
+import { useAuth } from "@/lib/useAuth";
+import { updateUser, getUserByUID, checkUsernameAvailability } from "@/lib/firestore";
 
 export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -13,9 +17,143 @@ export default function OnboardingPage() {
     username: "",
     fullName: "",
     role: "candidate", // candidate or recruiter
-    skillLevel: "", // beginner, intermediate, expert
-    experienceLevel: "", // Select an item
+    skill: "", // Frontend Development, Backend Development, UI/UX
+    experienceLevel: "", // Beginner, Intermediate, Expert
   });
+  const [loading, setLoading] = useState(false);
+  const [validationError, setValidationError] = useState("");
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+  const [checkingUsername, setCheckingUsername] = useState(false);
+  const [usernameError, setUsernameError] = useState("");
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+
+  // Check authentication and onboarding status
+  useEffect(() => {
+    const checkOnboardingStatus = async () => {
+      if (authLoading) {
+        return; // Still loading auth state
+      }
+      
+      if (!user) {
+        router.push("/auth/login");
+        return;
+      }
+      
+      try {
+        // Check if user has completed onboarding
+        const userProfile = await getUserByUID(user.uid);
+        
+        if (userProfile && userProfile.onboardingCompleted) {
+          // User has already completed onboarding, redirect to dashboard
+          console.log("User has already completed onboarding, redirecting to dashboard");
+          router.push("/dashboard");
+          return;
+        }
+        
+        // User hasn't completed onboarding, allow access to onboarding page
+        setCheckingOnboarding(false);
+      } catch (error) {
+        console.error("Error checking onboarding status:", error);
+        // If there's an error, assume they need onboarding
+        setCheckingOnboarding(false);
+      }
+    };
+    
+    checkOnboardingStatus();
+  }, [user, authLoading, router]);
+
+  // Username validation function
+  const validateUsername = async (username) => {
+    if (!username || username.trim() === "") {
+      setUsernameError("");
+      return true; // Empty username will be caught by required field validation
+    }
+    
+    // Check username length and format
+    if (username.length < 3) {
+      setUsernameError("Username must be at least 3 characters long.");
+      return false;
+    }
+    
+    if (username.length > 20) {
+      setUsernameError("Username must be 20 characters or less.");
+      return false;
+    }
+    
+    // Check for valid characters (alphanumeric and underscore only)
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      setUsernameError("Username can only contain letters, numbers, and underscores.");
+      return false;
+    }
+    
+    setCheckingUsername(true);
+    try {
+      const result = await checkUsernameAvailability(username, user?.uid);
+      if (!result.available) {
+        setUsernameError("This username is already taken. Please choose a different one.");
+        return false;
+      }
+      setUsernameError("");
+      return true;
+    } catch (error) {
+      console.error("Error checking username availability:", error);
+      setUsernameError("Unable to verify username availability. Please try again.");
+      return false;
+    } finally {
+      setCheckingUsername(false);
+    }
+  };
+
+  // Validation function to check if all required fields are filled
+  const isFormValid = () => {
+    return (
+      formData.username.trim() !== "" &&
+      formData.fullName.trim() !== "" &&
+      formData.role !== "" &&
+      formData.skill !== "" &&
+      formData.experienceLevel !== "" &&
+      usernameError === "" &&
+      !checkingUsername
+    );
+  };
+
+  // Step-specific validation functions
+  const isStep2Valid = () => {
+    return formData.username.trim() !== "" && formData.fullName.trim() !== "" && usernameError === "";
+  };
+
+  const isStep3Valid = () => {
+    return formData.role !== "";
+  };
+
+  const isStep4Valid = () => {
+    return formData.skill !== "";
+  };
+
+  const isStep5Valid = () => {
+    return formData.experienceLevel !== "";
+  };
+
+  // Show loading while checking authentication and onboarding status
+  if (authLoading || checkingOnboarding) {
+    return (
+      <div className="min-h-screen bg-[#f0f7ff] flex items-center justify-center">
+        <div className="text-center">
+          <div className="mb-4">
+            <Image
+              src="/logo/techterview_symbol_colored.png"
+              alt="TechTerview Logo"
+              width={80}
+              height={80}
+              className="mx-auto"
+            />
+          </div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -23,6 +161,23 @@ export default function OnboardingPage() {
       ...prev,
       [name]: value
     }));
+    
+    // Clear validation error when user starts typing
+    if (validationError) {
+      setValidationError("");
+    }
+    
+    // Validate username on change with debounce
+    if (name === 'username') {
+      setUsernameError(""); // Clear previous error immediately
+      // Debounce username validation
+      if (window.usernameValidationTimeout) {
+        clearTimeout(window.usernameValidationTimeout);
+      }
+      window.usernameValidationTimeout = setTimeout(() => {
+        validateUsername(value);
+      }, 500); // Wait 500ms after user stops typing
+    }
   };
 
   const handleRoleSelect = (role) => {
@@ -30,6 +185,10 @@ export default function OnboardingPage() {
       ...prev,
       role: role
     }));
+    // Clear validation error when user selects role
+    if (validationError) {
+      setValidationError("");
+    }
   };
 
   const handleExperienceSelect = (level) => {
@@ -37,9 +196,44 @@ export default function OnboardingPage() {
       ...prev,
       experienceLevel: level
     }));
+    // Clear validation error when user selects experience level
+    if (validationError) {
+      setValidationError("");
+    }
   };
 
-  const nextStep = () => {
+  const nextStep = async () => {
+    // Clear any existing validation errors
+    setValidationError("");
+    
+    // Validate current step before proceeding
+    if (currentStep === 2) {
+      // Check if basic fields are filled
+      if (formData.username.trim() === "" || formData.fullName.trim() === "") {
+        setValidationError("Please fill in both username and full name.");
+        return;
+      }
+      
+      // Validate username format and availability
+      const isUsernameValid = await validateUsername(formData.username);
+      if (!isUsernameValid) {
+        setValidationError("Please fix the username issue before proceeding.");
+        return;
+      }
+    }
+    if (currentStep === 3 && !isStep3Valid()) {
+      setValidationError("Please select your role.");
+      return;
+    }
+    if (currentStep === 4 && !isStep4Valid()) {
+      setValidationError("Please select your skill area.");
+      return;
+    }
+    if (currentStep === 5 && !isStep5Valid()) {
+      setValidationError("Please select your experience level.");
+      return;
+    }
+    
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
     }
@@ -60,15 +254,15 @@ export default function OnboardingPage() {
       case 1:
         return <Step1 nextStep={nextStep} />;
       case 2:
-        return <Step2 formData={formData} handleInputChange={handleInputChange} nextStep={nextStep} prevStep={prevStep} />;
+        return <Step2 formData={formData} handleInputChange={handleInputChange} nextStep={nextStep} prevStep={prevStep} validationError={validationError} usernameError={usernameError} checkingUsername={checkingUsername} />;
       case 3:
-        return <Step3 formData={formData} handleRoleSelect={handleRoleSelect} nextStep={nextStep} prevStep={prevStep} />;
+        return <Step3 formData={formData} handleRoleSelect={handleRoleSelect} nextStep={nextStep} prevStep={prevStep} validationError={validationError} />;
       case 4:
-        return <Step4 formData={formData} handleInputChange={handleInputChange} nextStep={nextStep} prevStep={prevStep} />;
+        return <Step4 formData={formData} handleInputChange={handleInputChange} nextStep={nextStep} prevStep={prevStep} validationError={validationError} />;
       case 5:
-        return <Step5 formData={formData} handleExperienceSelect={handleExperienceSelect} nextStep={nextStep} prevStep={prevStep} />;
+        return <Step5 formData={formData} handleExperienceSelect={handleExperienceSelect} nextStep={nextStep} prevStep={prevStep} validationError={validationError} />;
       case 6:
-        return <Step6 formData={formData} prevStep={prevStep} />;
+        return <Step6 formData={formData} prevStep={prevStep} user={user} router={router} loading={loading} setLoading={setLoading} isFormValid={isFormValid} />;
       default:
         return <Step1 nextStep={nextStep} />;
     }
@@ -121,7 +315,7 @@ function Step1({ nextStep }) {
 }
 
 // Step 2: Basic Information
-function Step2({ formData, handleInputChange, nextStep, prevStep }) {
+function Step2({ formData, handleInputChange, nextStep, prevStep, validationError, usernameError, checkingUsername }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-8">
       <div className="text-center w-full max-w-2xl">
@@ -157,9 +351,39 @@ function Step2({ formData, handleInputChange, nextStep, prevStep }) {
                 placeholder="JohnDoe17"
                 value={formData.username}
                 onChange={handleInputChange}
-                className="pl-12 h-12 w-full bg-white border border-gray-200 rounded-lg"
+                className={`pl-12 pr-10 h-12 w-full bg-white border rounded-lg ${
+                  usernameError ? 'border-red-300 focus:border-red-500' : 
+                  formData.username && !usernameError && !checkingUsername ? 'border-green-300 focus:border-green-500' :
+                  'border-gray-200'
+                }`}
               />
+              {/* Username validation indicator */}
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                {checkingUsername && (
+                  <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                )}
+                {!checkingUsername && formData.username && !usernameError && (
+                  <Check className="h-4 w-4 text-green-500" />
+                )}
+                {!checkingUsername && usernameError && (
+                  <X className="h-4 w-4 text-red-500" />
+                )}
+              </div>
             </div>
+            
+            {/* Username validation message */}
+            {usernameError && (
+              <div className="mt-2 text-sm text-red-600 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                <span>{usernameError}</span>
+              </div>
+            )}
+            {!usernameError && formData.username && !checkingUsername && formData.username.length >= 3 && (
+              <div className="mt-2 text-sm text-green-600 flex items-center gap-1">
+                <Check className="h-3 w-3" />
+                <span>Username is available!</span>
+              </div>
+            )}
           </div>
           
           {/* Full Name Field */}
@@ -180,6 +404,18 @@ function Step2({ formData, handleInputChange, nextStep, prevStep }) {
             </div>
           </div>
         </div>
+        
+        {/* Validation Error Alert */}
+        {validationError && (
+          <div className="mb-6">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {validationError}
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
         
         {/* Navigation Buttons */}
         <div className="flex justify-center gap-4">
@@ -206,7 +442,7 @@ function Step2({ formData, handleInputChange, nextStep, prevStep }) {
 }
 
 // Step 3: Role Selection
-function Step3({ formData, handleRoleSelect, nextStep, prevStep }) {
+function Step3({ formData, handleRoleSelect, nextStep, prevStep, validationError }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-8">
       <div className="text-center w-full max-w-4xl">
@@ -283,6 +519,18 @@ function Step3({ formData, handleRoleSelect, nextStep, prevStep }) {
           </div>
         </div>
         
+        {/* Validation Error Alert */}
+        {validationError && (
+          <div className="mb-6">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {validationError}
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
+        
         {/* Navigation Buttons */}
         <div className="flex justify-center gap-4">
           <Button 
@@ -308,19 +556,11 @@ function Step3({ formData, handleRoleSelect, nextStep, prevStep }) {
 }
 
 // Step 4: Skill Level
-function Step4({ formData, handleInputChange, nextStep, prevStep }) {
+function Step4({ formData, handleInputChange, nextStep, prevStep, validationError }) {
   const skillOptions = [
-    "Frontend Developer",
-    "Backend Developer", 
-    "Full Stack Developer",
-    "Mobile App Developer",
-    "Data Scientist",
-    "DevOps Engineer",
-    "UI/UX Designer",
-    "Product Manager",
-    "QA Engineer",
-    "Tech Enthusiast",
-    "Other"
+    "Frontend Development",
+    "Backend Development",
+    "UI/UX"
   ];
 
   return (
@@ -337,18 +577,18 @@ function Step4({ formData, handleInputChange, nextStep, prevStep }) {
         </div>
         
         <h1 className="font-playfair font-bold text-5xl text-black mb-6">
-          What is your current skill?
+          What is your skill area?
         </h1>
         
         <p className="text-2xl text-black max-w-2xl mx-auto mb-12 leading-relaxed">
-          Are you a tech enthusiast, web developer, mobile app developer, or just curious?
+          Which area of technology interests you the most?
         </p>
         
         {/* Skill Selection Dropdown */}
         <div className="mb-12">
           <select
-            name="skillLevel"
-            value={formData.skillLevel}
+            name="skill"
+            value={formData.skill}
             onChange={handleInputChange}
             className="w-full h-12 px-4 bg-white border border-gray-200 rounded-lg text-gray-500 text-sm appearance-none cursor-pointer"
           >
@@ -360,6 +600,18 @@ function Step4({ formData, handleInputChange, nextStep, prevStep }) {
             ))}
           </select>
         </div>
+        
+        {/* Validation Error Alert */}
+        {validationError && (
+          <div className="mb-6">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {validationError}
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
         
         {/* Navigation Buttons */}
         <div className="flex justify-center gap-4">
@@ -386,11 +638,11 @@ function Step4({ formData, handleInputChange, nextStep, prevStep }) {
 }
 
 // Step 5: Experience Level
-function Step5({ formData, handleExperienceSelect, nextStep, prevStep }) {
+function Step5({ formData, handleExperienceSelect, nextStep, prevStep, validationError }) {
   const experienceLevels = [
-    { value: 'beginner', label: 'Beginner' },
-    { value: 'intermediate', label: 'Intermediate' },
-    { value: 'expert', label: 'Expert' }
+    { value: 'Beginner', label: 'Beginner' },
+    { value: 'Intermediate', label: 'Intermediate' },
+    { value: 'Expert', label: 'Expert' }
   ];
 
   return (
@@ -445,6 +697,18 @@ function Step5({ formData, handleExperienceSelect, nextStep, prevStep }) {
           ))}
         </div>
         
+        {/* Validation Error Alert */}
+        {validationError && (
+          <div className="mb-6">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {validationError}
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
+        
         {/* Navigation Buttons */}
         <div className="flex justify-center gap-4">
           <Button 
@@ -470,11 +734,40 @@ function Step5({ formData, handleExperienceSelect, nextStep, prevStep }) {
 }
 
 // Step 6: Review
-function Step6({ formData, prevStep }) {
-  const handleFinish = () => {
-    // Handle onboarding completion
-    console.log("Onboarding completed with data:", formData);
-    // Redirect to dashboard or main app
+function Step6({ formData, prevStep, user, router, loading, setLoading, isFormValid }) {
+  const handleFinish = async () => {
+    if (!user) return;
+    
+    // Validate all fields before proceeding
+    if (!isFormValid()) {
+      // The button should already be disabled, but this is a safety check
+      console.warn("Attempted to submit incomplete form");
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      // Update user profile with onboarding data
+      await updateUser(user.uid, {
+        username: formData.username,
+        displayName: formData.fullName,
+        role: formData.role,
+        skill: formData.skill,
+        experienceLevel: formData.experienceLevel,
+        profileComplete: true,
+        onboardingCompleted: true
+      });
+      
+      console.log("Onboarding completed successfully!");
+      // Redirect to dashboard
+      router.push("/dashboard");
+    } catch (error) {
+      console.error("Error completing onboarding:", error);
+      // Could show a toast notification here instead of alert
+      // For now, just log the error - the user will see the loading state end
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -504,8 +797,14 @@ function Step6({ formData, prevStep }) {
           <div className="bg-white border border-gray-200 rounded-xl p-6 text-left">
             <h3 className="text-lg font-semibold text-black mb-4">Basic Information</h3>
             <div className="space-y-2">
-              <p className="text-gray-600"><span className="font-medium">Username:</span> {formData.username || "Not provided"}</p>
-              <p className="text-gray-600"><span className="font-medium">Full Name:</span> {formData.fullName || "Not provided"}</p>
+              <p className={`${formData.username.trim() === "" ? "text-red-600" : "text-gray-600"}`}>
+                <span className="font-medium">Username:</span> {formData.username || "Not provided"}
+                {formData.username.trim() === "" && <span className="text-red-500 ml-2">*Required</span>}
+              </p>
+              <p className={`${formData.fullName.trim() === "" ? "text-red-600" : "text-gray-600"}`}>
+                <span className="font-medium">Full Name:</span> {formData.fullName || "Not provided"}
+                {formData.fullName.trim() === "" && <span className="text-red-500 ml-2">*Required</span>}
+              </p>
             </div>
           </div>
           
@@ -513,12 +812,30 @@ function Step6({ formData, prevStep }) {
           <div className="bg-white border border-gray-200 rounded-xl p-6 text-left">
             <h3 className="text-lg font-semibold text-black mb-4">Role & Experience</h3>
             <div className="space-y-2">
-              <p className="text-gray-600"><span className="font-medium">Role:</span> {formData.role === 'candidate' ? 'Candidate' : 'Recruiter'}</p>
-              <p className="text-gray-600"><span className="font-medium">Skill:</span> {formData.skillLevel || "Not selected"}</p>
-              <p className="text-gray-600"><span className="font-medium">Experience Level:</span> {formData.experienceLevel ? formData.experienceLevel.charAt(0).toUpperCase() + formData.experienceLevel.slice(1) : "Not selected"}</p>
+              <p className={`${formData.role === "" ? "text-red-600" : "text-gray-600"}`}>
+                <span className="font-medium">Role:</span> {formData.role === 'candidate' ? 'Candidate' : formData.role === 'recruiter' ? 'Recruiter' : 'Not selected'}
+                {formData.role === "" && <span className="text-red-500 ml-2">*Required</span>}
+              </p>
+              <p className={`${formData.skill === "" ? "text-red-600" : "text-gray-600"}`}>
+                <span className="font-medium">Skill:</span> {formData.skill || "Not selected"}
+                {formData.skill === "" && <span className="text-red-500 ml-2">*Required</span>}
+              </p>
+              <p className={`${formData.experienceLevel === "" ? "text-red-600" : "text-gray-600"}`}>
+                <span className="font-medium">Experience Level:</span> {formData.experienceLevel || "Not selected"}
+                {formData.experienceLevel === "" && <span className="text-red-500 ml-2">*Required</span>}
+              </p>
             </div>
           </div>
         </div>
+        
+        {/* Validation Message */}
+        {!isFormValid() && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-center">
+            <p className="text-red-700 text-sm font-medium">
+              Please complete all required fields marked with * before finishing onboarding.
+            </p>
+          </div>
+        )}
         
         {/* Navigation Buttons */}
         <div className="flex justify-center gap-4">
@@ -533,9 +850,10 @@ function Step6({ formData, prevStep }) {
           
           <Button 
             onClick={handleFinish}
-            className="bg-[#354fd2] text-white px-8 py-3 rounded-lg text-sm font-medium hover:bg-[#2a3fa8] transition-colors min-w-[250px]"
+            disabled={loading || !isFormValid()}
+            className="bg-[#354fd2] text-white px-8 py-3 rounded-lg text-sm font-medium hover:bg-[#2a3fa8] transition-colors min-w-[250px] disabled:opacity-50"
           >
-            Complete Onboarding
+            {loading ? "Saving..." : "Complete Onboarding"}
           </Button>
         </div>
       </div>

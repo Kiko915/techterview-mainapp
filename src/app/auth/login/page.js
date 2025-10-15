@@ -3,11 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Logo } from "@/components/ui/logo";
 import { Version } from "@/components/ui/version";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { signInWithEmail, signInWithGoogleExistingOnly } from "@/lib/firebase";
+import GuestGuard from "@/components/GuestGuard";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -15,6 +18,45 @@ export default function LoginPage() {
     email: "",
     password: ""
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const router = useRouter();
+
+  // Convert Firebase error codes to user-friendly messages
+  const getFriendlyErrorMessage = (error) => {
+    const errorCode = error.code || error.message;
+    
+    switch (errorCode) {
+      case 'auth/user-not-found':
+        return 'No account found with this email address. Please check your email or sign up for a new account.';
+      case 'auth/wrong-password':
+        return 'Incorrect password. Please try again or use the "Forgot Password" link.';
+      case 'auth/invalid-email':
+        return 'Please enter a valid email address.';
+      case 'auth/user-disabled':
+        return 'This account has been disabled. Please contact support for assistance.';
+      case 'auth/too-many-requests':
+        return 'Too many failed login attempts. Please wait a few minutes before trying again.';
+      case 'auth/network-request-failed':
+        return 'Network error. Please check your internet connection and try again.';
+      case 'auth/invalid-credential':
+        return 'Invalid email or password. Please check your credentials and try again.';
+      case 'auth/popup-closed-by-user':
+        return 'Sign-in was cancelled. Please try again.';
+      case 'auth/popup-blocked':
+        return 'Pop-up was blocked by your browser. Please allow pop-ups for this site and try again.';
+      case 'auth/cancelled-popup-request':
+        return 'Sign-in was cancelled. Please try again.';
+      case 'GOOGLE_SIGN_IN_EXISTING_ONLY':
+        return 'No account found with this Google email. Please sign up first or use a different Google account.';
+      default:
+        // Check if it's a custom message we want to keep
+        if (error.message && !error.code) {
+          return error.message;
+        }
+        return 'Something went wrong. Please try again or contact support if the problem persists.';
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -24,14 +66,42 @@ export default function LoginPage() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle login logic here
-    console.log("Login attempt:", formData);
+    setLoading(true);
+    setError("");
+    
+    try {
+      await signInWithEmail(formData.email, formData.password);
+      // Redirect to onboarding (AuthGuard will check if completed and redirect appropriately)
+      router.push("/onboarding");
+    } catch (error) {
+      console.error("Login error:", error);
+      setError(getFriendlyErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    setError("");
+    
+    try {
+      await signInWithGoogleExistingOnly();
+      // Redirect to onboarding (AuthGuard will check if completed and redirect appropriately)
+      router.push("/onboarding");
+    } catch (error) {
+      console.error("Google sign-in error:", error);
+      setError(getFriendlyErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <GuestGuard>
+      <div className="min-h-screen bg-background flex">
       {/* Left Side - Hero Section */}
       <div className="hidden lg:flex lg:w-1/2 relative">
         <div className="absolute inset-4">
@@ -96,6 +166,12 @@ export default function LoginPage() {
               </h1>
             </div>
 
+            {error && (
+              <div className="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded text-sm">
+                {error}
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Email Field */}
               <div className="space-y-2">
@@ -159,9 +235,10 @@ export default function LoginPage() {
               {/* Login Button */}
               <Button 
                 type="submit"
-                className="w-full h-12 bg-primary text-primary-foreground hover:bg-primary/90 rounded-md font-medium"
+                disabled={loading}
+                className="w-full h-12 bg-primary text-primary-foreground hover:bg-primary/90 rounded-md font-medium disabled:opacity-50"
               >
-                Login
+                {loading ? "Signing in..." : "Login"}
               </Button>
 
               {/* Divider */}
@@ -177,8 +254,10 @@ export default function LoginPage() {
               {/* Google Login Button */}
               <Button 
                 type="button"
+                onClick={handleGoogleSignIn}
+                disabled={loading}
                 variant="outline"
-                className="w-full h-12 bg-white border border-gray-200 text-gray-900 hover:bg-gray-50 rounded-md font-medium shadow-sm"
+                className="w-full h-12 bg-white border border-gray-200 text-gray-900 hover:bg-gray-50 rounded-md font-medium shadow-sm disabled:opacity-50"
               >
                 <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -186,7 +265,7 @@ export default function LoginPage() {
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
-                Continue with Google
+Sign in with Google
               </Button>
 
               {/* Signup Link */}
@@ -211,5 +290,6 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+    </GuestGuard>
   );
 }

@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,13 +15,34 @@ import {
   Target,
   Trophy
 } from "lucide-react";
+import { useAuth } from "@/lib/useAuth";
+import { getUserByUID } from "@/lib/firestore";
 
 export default function DashboardPage() {
+  const { user } = useAuth();
+  const [userProfile, setUserProfile] = useState(null);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (user) {
+        try {
+          const profile = await getUserByUID(user.uid);
+          setUserProfile(profile);
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+        }
+      }
+    };
+
+    fetchUserProfile();
+  }, [user]);
+
+  const userName = userProfile?.displayName || userProfile?.username || user?.email?.split('@')[0] || 'User';
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold text-gray-900">Welcome back, John!</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Welcome back, {userName}!</h1>
         <p className="text-gray-600">
           Ready to level up your interview skills? Here's your progress overview.
         </p>

@@ -6,21 +6,52 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Version } from "@/components/ui/version";
 import { Logo } from "@/components/ui/logo";
+import { resetPassword } from "@/lib/firebase";
+import { getUserByEmail } from "@/lib/firestore";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [error, setError] = useState("");
+  const router = useRouter();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setError("");
     
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // First, check if user exists in our Firestore database
+      const existingUser = await getUserByEmail(email);
+      
+      if (!existingUser) {
+        setError("No account found with this email address.");
+        return;
+      }
+      
+      // If user exists, send password reset email
+      await resetPassword(email);
       setIsSubmitted(true);
-    }, 2000);
+    } catch (error) {
+      console.error("Password reset error:", error);
+      
+      // Handle specific Firebase error codes
+      switch (error.code) {
+        case 'auth/invalid-email':
+          setError("Please enter a valid email address.");
+          break;
+        case 'auth/too-many-requests':
+          setError("Too many requests. Please try again later.");
+          break;
+        default:
+          setError("Failed to send password reset email. Please try again.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -54,13 +85,23 @@ export default function ForgotPasswordPage() {
                   Enter the email address you registered with TechTerview
                 </p>
 
+                {/* Error Message */}
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-600 px-3 py-2 rounded-md text-sm">
+                    {error}
+                  </div>
+                )}
+
                 {/* Email Input */}
                 <div className="space-y-2">
                   <Input
                     type="email"
                     placeholder="johndoe@gmail.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (error) setError(""); // Clear error when user starts typing
+                    }}
                     required
                     className="h-11 border-input text-foreground placeholder:text-muted-foreground"
                   />
@@ -88,16 +129,25 @@ export default function ForgotPasswordPage() {
                 <p className="text-sm text-muted-foreground">
                   We've sent a password reset link to <span className="font-medium">{email}</span>
                 </p>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsSubmitted(false);
-                    setEmail("");
-                  }}
-                  className="w-full"
-                >
-                  Send another email
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsSubmitted(false);
+                      setEmail("");
+                      setError("");
+                    }}
+                    className="w-full"
+                  >
+                    Send another email
+                  </Button>
+                  <Button
+                    onClick={() => router.push('/auth/login')}
+                    className="w-full"
+                  >
+                    Back to Login
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>
@@ -106,9 +156,9 @@ export default function ForgotPasswordPage() {
         {/* Back to Login */}
         <div className="text-center">
           <Button variant="ghost" asChild className="text-muted-foreground hover:text-foreground">
-            <a href="/auth/login">
+            <Link href="/auth/login">
               ← Back to Login
-            </a>
+            </Link>
           </Button>
         </div>
       </div>

@@ -63,18 +63,13 @@ export default function Error({ error, reset }) {
   return (
     <div className="min-h-screen bg-[#f0f7ff] relative flex flex-col items-center justify-center p-8">
       {/* Logo */}
-      <div className="absolute top-[124px]">
+      <div className="mb-10">
         <Logo variant="wordmark" width={283} height={53} />
       </div>
       
       {/* Main Content */}
       <div className="text-center max-w-2xl mx-auto">
-        {/* Error Icon */}
-        <div className="mb-8 flex justify-center">
-          <div className="p-4 bg-red-100 rounded-full">
-            <ErrorIcon className="h-12 w-12 text-red-600" />
-          </div>
-        </div>
+        
 
         {/* Error Code/Number */}
         <h1 className="font-playfair font-bold text-[128px] leading-[64px] text-[#141414] mb-4">

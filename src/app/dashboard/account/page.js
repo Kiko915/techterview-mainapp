@@ -1,38 +1,91 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import {
-  User,
-  Lock,
-  Award,
-  Edit,
-  Upload,
-  Trash2,
-  Eye,
-  EyeOff,
-  MapPin,
-  Calendar,
-  Mail,
-  AtSign,
-  Flag
-} from "lucide-react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/lib/useAuth";
+import { getUserByUID, updateUser, checkUsernameAvailability } from "@/lib/firestore";
+import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { toast } from "sonner";
+import AccountSidebar from "./components/AccountSidebar";
+import PersonalInfoTab from "./components/PersonalInfoTab";
+import SecurityTab from "./components/SecurityTab";
+import AchievementsTab from "./components/AchievementsTab";
 
 export default function AccountPage() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('personal');
+  const [userProfile, setUserProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [countries, setCountries] = useState([]);
+  
+  // Edit Profile Dialog States
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    displayName: '',
+    username: '',
+    country: '',
+    address: '',
+    skill: '',
+    experienceLevel: ''
+  });
+  const [usernameError, setUsernameError] = useState('');
+  const [checkingUsername, setCheckingUsername] = useState(false);
+
+  // Password States
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: ""
   });
+
+  // Fetch user profile data
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (user) {
+        try {
+          const profile = await getUserByUID(user.uid);
+          setUserProfile(profile);
+          setEditFormData({
+            displayName: profile?.displayName || '',
+            username: profile?.username || '',
+            country: profile?.country || '',
+            address: profile?.address || '',
+            skill: profile?.skill || '',
+            experienceLevel: profile?.experienceLevel || ''
+          });
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchUserProfile();
+  }, [user]);
+
+  // Fetch countries data
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const response = await fetch('https://restcountries.com/v3.1/all?fields=name,flags');
+        const data = await response.json();
+        const sortedCountries = data.sort((a, b) => 
+          a.name.common.localeCompare(b.name.common)
+        );
+        setCountries(sortedCountries);
+      } catch (error) {
+        console.error('Error fetching countries:', error);
+      }
+    };
+
+    fetchCountries();
+  }, []);
 
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
@@ -42,14 +95,170 @@ export default function AccountPage() {
     }));
   };
 
-  const handlePasswordUpdate = (e) => {
+  const handlePasswordUpdate = async (e) => {
     e.preventDefault();
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert("New passwords don't match!");
+    
+    if (!user?.uid || !user?.email) {
+      toast.error("User not authenticated. Please try again.");
       return;
     }
-    console.log("Password update:", passwordData);
-    // Handle password update logic here
+    
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error("New passwords don't match!");
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      toast.error("New password must be at least 6 characters long!");
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      // Reauthenticate user first
+      const credential = EmailAuthProvider.credential(user.email, passwordData.currentPassword);
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      
+      // Update password
+      await updatePassword(auth.currentUser, passwordData.newPassword);
+      
+      toast.success("Password updated successfully!");
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: ""
+      });
+    } catch (error) {
+      console.error('Error updating password:', error);
+      if (error.code === 'auth/wrong-password') {
+        toast.error("Current password is incorrect.");
+      } else {
+        toast.error("Failed to update password. Please try again.");
+      }
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  const handleEditFormChange = (field, value) => {
+    setEditFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    
+    // Clear username error when user starts typing
+    if (field === 'username') {
+      setUsernameError('');
+    }
+  };
+
+  // Debounced username validation
+  const validateUsername = async (username) => {
+    if (!username || username === userProfile?.username || !user?.uid) {
+      setUsernameError('');
+      return true;
+    }
+
+    setCheckingUsername(true);
+    try {
+      const result = await checkUsernameAvailability(username, user.uid);
+      if (!result.available) {
+        setUsernameError('This username is already taken');
+        return false;
+      } else {
+        setUsernameError('');
+        return true;
+      }
+    } catch (error) {
+      console.error('Error checking username:', error);
+      setUsernameError('Error validating username');
+      return false;
+    } finally {
+      setCheckingUsername(false);
+    }
+  };
+
+  // Debounce username validation
+  useEffect(() => {
+    if (editFormData.username && editFormData.username !== userProfile?.username && user?.uid) {
+      const timeoutId = setTimeout(() => {
+        validateUsername(editFormData.username);
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [editFormData.username, userProfile?.username, user?.uid]);
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!user?.uid) {
+      toast.error("User not authenticated. Please try again.");
+      return;
+    }
+    
+    if (!editFormData.displayName.trim() || !editFormData.username.trim()) {
+      toast.error("Display name and username are required!");
+      return;
+    }
+
+    // Check if there's a username error
+    if (usernameError) {
+      toast.error("Please fix the username error before submitting.");
+      return;
+    }
+
+    // Final username validation if it's different from current
+    if (editFormData.username !== userProfile?.username) {
+      const isValid = await validateUsername(editFormData.username);
+      if (!isValid) {
+        toast.error("Username is not available. Please choose a different one.");
+        return;
+      }
+    }
+
+    setEditLoading(true);
+    try {
+      await updateUser(user.uid, {
+        displayName: editFormData.displayName,
+        username: editFormData.username.toLowerCase(),
+        country: editFormData.country,
+        address: editFormData.address,
+        skill: editFormData.skill,
+        experienceLevel: editFormData.experienceLevel
+      });
+      
+      // Refresh user profile
+      const updatedProfile = await getUserByUID(user.uid);
+      setUserProfile(updatedProfile);
+      setEditDialogOpen(false);
+      toast.success("Profile updated successfully!");
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast.error("Failed to update profile. Please try again.");
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const formatDate = (timestamp) => {
+    if (!timestamp) return "N/A";
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return date.toLocaleDateString();
+  };
+
+  const getUserInitials = () => {
+    if (userProfile?.displayName) {
+      return userProfile.displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    }
+    if (user?.email) {
+      return user.email.slice(0, 2).toUpperCase();
+    }
+    return "U";
+  };
+
+  const getSelectedCountryFlag = () => {
+    const selectedCountry = countries.find(c => c.name.common === editFormData.country);
+    return selectedCountry?.flags?.svg || null;
   };
 
   // Sample achievements data
@@ -64,7 +273,7 @@ export default function AccountPage() {
       emoji: "💻",
       title: "Profile Completed",
       description: "You've filled out your personal info.",
-      earned: true
+      earned: userProfile?.profileComplete || false
     },
     {
       emoji: "🎯",
@@ -86,352 +295,65 @@ export default function AccountPage() {
     }
   ];
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Sidebar Navigation */}
-        <Card className="lg:col-span-1 h-fit">
-          <CardContent className="p-4">
-            <nav className="space-y-2">
-              <Button 
-                variant="ghost" 
-                onClick={() => setActiveTab('personal')}
-                className={`w-full justify-start ${
-                  activeTab === 'personal'
-                    ? 'bg-[#354fd2] text-white hover:bg-[#2a3fa8]'
-                    : 'hover:bg-gray-100'
-                }`}
-              >
-                <User className="h-4 w-4 mr-2" />
-                Personal Information
-              </Button>
-              <Button 
-                variant="ghost" 
-                onClick={() => setActiveTab('security')}
-                className={`w-full justify-start ${
-                  activeTab === 'security'
-                    ? 'bg-[#354fd2] text-white hover:bg-[#2a3fa8]'
-                    : 'hover:bg-gray-100'
-                }`}
-              >
-                <Lock className="h-4 w-4 mr-2" />
-                Security Settings
-              </Button>
-              <Button 
-                variant="ghost" 
-                onClick={() => setActiveTab('achievements')}
-                className={`w-full justify-start ${
-                  activeTab === 'achievements'
-                    ? 'bg-[#354fd2] text-white hover:bg-[#2a3fa8]'
-                    : 'hover:bg-gray-100'
-                }`}
-              >
-                <Award className="h-4 w-4 mr-2" />
-                Achievements
-              </Button>
-            </nav>
-          </CardContent>
-        </Card>
-
+        <AccountSidebar 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab} 
+        />
+        
         {/* Main Content */}
         <div className="lg:col-span-3">
           {activeTab === 'personal' && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Personal Information
-                </CardTitle>
-                <Separator />
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Profile Picture Section */}
-                <div className="flex items-start gap-6">
-                  <div className="relative">
-                    <Avatar className="w-32 h-32">
-                      <AvatarImage src="/avatars/user.png" alt="Profile" />
-                      <AvatarFallback className="text-2xl bg-[#354fd2] text-white">
-                        JD
-                      </AvatarFallback>
-                    </Avatar>
-                  </div>
-                  <div className="flex-1 space-y-4">
-                    <div className="flex gap-2">
-                      <Button size="sm" className="bg-[#354fd2] hover:bg-[#2a3fa8]">
-                        <Upload className="h-4 w-4 mr-2" />
-                        Upload
-                      </Button>
-                      <Button size="sm" variant="outline">
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Remove
-                      </Button>
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      Recommended: Square image, at least 400x400px
-                    </p>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Form Fields */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">
-                      First Name
-                    </label>
-                    <Input defaultValue="John" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">
-                      Last Name
-                    </label>
-                    <Input defaultValue="Doe" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">
-                      Email
-                    </label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-                      <Input 
-                        defaultValue="johndoe@gmail.com" 
-                        className="pl-10"
-                        type="email"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">
-                      Username
-                    </label>
-                    <div className="relative">
-                      <AtSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-                      <Input 
-                        defaultValue="johndoe17" 
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">
-                      Role
-                    </label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-                      <Input 
-                        defaultValue="Candidate" 
-                        className="pl-10"
-                        readOnly
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">
-                      Joined Date
-                    </label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-                      <Input 
-                        defaultValue="10/14/2025" 
-                        className="pl-10"
-                        readOnly
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">
-                      Country
-                    </label>
-                    <div className="relative">
-                      <Flag className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-                      <Input 
-                        defaultValue="Philippines" 
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">
-                      Address
-                    </label>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-                      <Input 
-                        defaultValue="588 P. Burgos Street, Liliw, Laguna" 
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="flex justify-start">
-                  <Button className="bg-[#354fd2] hover:bg-[#2a3fa8]">
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit Profile
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <PersonalInfoTab
+              user={user}
+              userProfile={userProfile}
+              formatDate={formatDate}
+              getUserInitials={getUserInitials}
+              editDialogOpen={editDialogOpen}
+              setEditDialogOpen={setEditDialogOpen}
+              editFormData={editFormData}
+              handleEditFormChange={handleEditFormChange}
+              usernameError={usernameError}
+              checkingUsername={checkingUsername}
+              countries={countries}
+              getSelectedCountryFlag={getSelectedCountryFlag}
+              handleEditSubmit={handleEditSubmit}
+              editLoading={editLoading}
+            />
           )}
 
           {activeTab === 'security' && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Lock className="h-5 w-5" />
-                  Security Settings
-                </CardTitle>
-                <CardDescription>
-                  Change your password to keep your account secure
-                </CardDescription>
-                <Separator />
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handlePasswordUpdate} className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">
-                      Current Password
-                    </label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-                      <Input
-                        type={showCurrentPassword ? "text" : "password"}
-                        name="currentPassword"
-                        value={passwordData.currentPassword}
-                        onChange={handlePasswordChange}
-                        className="pl-10 pr-10"
-                        placeholder="Enter current password"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                      >
-                        {showCurrentPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">
-                      New Password
-                    </label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-                      <Input
-                        type={showNewPassword ? "text" : "password"}
-                        name="newPassword"
-                        value={passwordData.newPassword}
-                        onChange={handlePasswordChange}
-                        className="pl-10 pr-10"
-                        placeholder="Enter new password"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                      >
-                        {showNewPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">
-                      Confirm New Password
-                    </label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-                      <Input
-                        type={showConfirmPassword ? "text" : "password"}
-                        name="confirmPassword"
-                        value={passwordData.confirmPassword}
-                        onChange={handlePasswordChange}
-                        className="pl-10 pr-10"
-                        placeholder="Confirm new password"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                      >
-                        {showConfirmPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  <Button type="submit" className="bg-[#354fd2] hover:bg-[#2a3fa8]">
-                    Update Password
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
+            <SecurityTab
+              showCurrentPassword={showCurrentPassword}
+              setShowCurrentPassword={setShowCurrentPassword}
+              showNewPassword={showNewPassword}
+              setShowNewPassword={setShowNewPassword}
+              showConfirmPassword={showConfirmPassword}
+              setShowConfirmPassword={setShowConfirmPassword}
+              passwordData={passwordData}
+              handlePasswordChange={handlePasswordChange}
+              handlePasswordUpdate={handlePasswordUpdate}
+              passwordLoading={passwordLoading}
+            />
           )}
 
           {activeTab === 'achievements' && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Award className="h-5 w-5" />
-                  Achievements
-                </CardTitle>
-                <CardDescription>
-                  Your milestones and accomplishments on TechTerview
-                </CardDescription>
-                <Separator />
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {achievements.map((achievement, index) => (
-                    <Card 
-                      key={index} 
-                      className={`p-4 ${
-                        achievement.earned 
-                          ? 'bg-green-50 border-green-200' 
-                          : 'bg-gray-50 border-gray-200 opacity-60'
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="text-2xl">{achievement.emoji}</div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-semibold text-sm text-gray-900">
-                              {achievement.title}
-                            </h4>
-                            {achievement.earned && (
-                              <Badge className="bg-green-100 text-green-700 hover:bg-green-100 text-xs">
-                                Earned
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-gray-600">
-                            {achievement.description}
-                          </p>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <AchievementsTab 
+              achievements={achievements} 
+            />
           )}
         </div>
       </div>

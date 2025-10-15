@@ -1,6 +1,7 @@
 import { Playfair_Display, Montserrat } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { Toaster } from "@/components/ui/sonner";
 
 const playfairDisplay = Playfair_Display({
   variable: "--font-playfair-display",
@@ -27,6 +28,7 @@ export default function RootLayout({ children }) {
       >
         <ThemeProvider>
           {children}
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

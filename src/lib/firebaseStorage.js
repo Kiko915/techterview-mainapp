@@ -6,7 +6,39 @@ import { storage } from '../../lib/firebase';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 
 /**
- * Upload an image to Firebase Storage with progress tracking
+ * Upload with retry logic for handling 503 errors
+ * @param {Function} uploadFn - The upload function to retry
+ * @param {number} maxRetries - Maximum number of retries
+ * @param {number} delay - Delay between retries in ms
+ * @returns {Promise} Upload result
+ */
+const uploadWithRetry = async (uploadFn, maxRetries = 3, delay = 2000) => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await uploadFn();
+    } catch (error) {
+      console.log(`Upload attempt ${attempt} failed:`, error.message);
+      
+      // Check if it's a 503 error or similar service unavailable error
+      const is503Error = error.message?.includes('503') || 
+                          error.code === 'storage/unknown' ||
+                          error.message?.includes('Service Unavailable');
+      
+      if (is503Error && attempt < maxRetries) {
+        console.log(`Retrying in ${delay}ms... (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 1.5; // Exponential backoff
+        continue;
+      }
+      
+      // If it's not a retryable error or we've exceeded max retries, throw
+      throw error;
+    }
+  }
+};
+
+/**
+ * Upload an image to Firebase Storage with progress tracking and retry logic
  * @param {File} file - The image file to upload
  * @param {string} userId - The user ID for organizing files
  * @param {Function} onProgress - Progress callback function (receives percentage)

@@ -5,7 +5,7 @@ import { useDropzone } from "react-dropzone";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { uploadProfileImage, testFirebaseStorageConfig } from "@/lib/firebaseStorage";
+import { uploadProfileImageSimple, testFirebaseStorageConfigSimple } from "@/lib/firebaseStorageSimple";
 import { updateUser } from "@/lib/firestore";
 import { toast } from "sonner";
 import { Upload, X, Image as ImageIcon, AlertCircle } from "lucide-react";
@@ -66,7 +66,7 @@ export default function ImageUploadDialog({
     }
 
     // Test configuration before upload
-    if (!testFirebaseStorageConfig()) {
+    if (!testFirebaseStorageConfigSimple()) {
       toast.error('Firebase Storage is not properly configured');
       return;
     }
@@ -79,14 +79,13 @@ export default function ImageUploadDialog({
       
       console.log('🔄 Starting profile image upload...');
       
-      // Upload to Firebase Storage with real progress tracking
-      uploadResult = await uploadProfileImage(
-        selectedFile, 
-        userId, 
-        (progress) => {
-          setUploadProgress(progress);
-        }
-      );
+      // Simulate progress for simple upload
+      setUploadProgress(25);
+      
+      // Upload to Firebase Storage (simple version - more reliable)
+      uploadResult = await uploadProfileImageSimple(selectedFile, userId);
+      
+      setUploadProgress(90);
       
       // Update user profile in Firebase with new image URL
       await updateUser(userId, {

@@ -261,6 +261,24 @@ export default function AccountPage() {
     return selectedCountry?.flags?.svg || null;
   };
 
+  const handleImageUpdate = async (newImageUrl) => {
+    // Update the local user profile state
+    setUserProfile(prev => ({
+      ...prev,
+      photoURL: newImageUrl
+    }));
+    
+    // Optionally refetch the user profile to ensure consistency
+    if (user?.uid) {
+      try {
+        const updatedProfile = await getUserByUID(user.uid);
+        setUserProfile(updatedProfile);
+      } catch (error) {
+        console.error('Error refreshing user profile:', error);
+      }
+    }
+  };
+
   // Sample achievements data
   const achievements = [
     {
@@ -332,6 +350,7 @@ export default function AccountPage() {
               getSelectedCountryFlag={getSelectedCountryFlag}
               handleEditSubmit={handleEditSubmit}
               editLoading={editLoading}
+              onImageUpdate={handleImageUpdate}
             />
           )}
 

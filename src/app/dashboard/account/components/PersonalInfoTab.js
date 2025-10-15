@@ -21,7 +21,8 @@ export default function PersonalInfoTab({
   countries,
   getSelectedCountryFlag,
   handleEditSubmit,
-  editLoading
+  editLoading,
+  onImageUpdate
 }) {
   return (
     <Card>
@@ -36,6 +37,8 @@ export default function PersonalInfoTab({
         <ProfilePicture 
           user={user}
           getUserInitials={getUserInitials}
+          userProfile={userProfile}
+          onImageUpdate={onImageUpdate}
         />
         
         <Separator />

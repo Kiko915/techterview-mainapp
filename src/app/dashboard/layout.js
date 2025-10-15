@@ -24,6 +24,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -260,7 +261,17 @@ function TopNavbar() {
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <div className="flex items-center justify-start gap-2 p-2">
               <div className="flex flex-col space-y-1 leading-none">
-                <p className="font-medium text-sm">{userName}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-sm">{userName}</p>
+                  {userProfile?.role && (userProfile.role === 'candidate' || userProfile.role === 'recruiter') && (
+                    <Badge 
+                      variant={userProfile.role === 'candidate' ? 'default' : 'secondary'}
+                      className="text-xs capitalize"
+                    >
+                      {userProfile.role}
+                    </Badge>
+                  )}
+                </div>
                 <p className="text-xs text-gray-600">{user?.email}</p>
               </div>
             </div>

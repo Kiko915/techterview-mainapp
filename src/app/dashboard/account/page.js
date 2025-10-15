@@ -6,6 +6,7 @@ import { getUserByUID, updateUser, checkUsernameAvailability } from "@/lib/fires
 import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { toast } from "sonner";
+import { emitProfileUpdate } from "@/lib/profileEvents";
 import AccountSidebar from "./components/AccountSidebar";
 import PersonalInfoTab from "./components/PersonalInfoTab";
 import SecurityTab from "./components/SecurityTab";
@@ -263,16 +264,21 @@ export default function AccountPage() {
 
   const handleImageUpdate = async (newImageUrl) => {
     // Update the local user profile state
-    setUserProfile(prev => ({
-      ...prev,
+    const updatedProfile = {
+      ...userProfile,
       photoURL: newImageUrl
-    }));
+    };
+    setUserProfile(updatedProfile);
+    
+    // Emit profile update event for other components (like TopNavbar)
+    emitProfileUpdate(updatedProfile);
     
     // Optionally refetch the user profile to ensure consistency
     if (user?.uid) {
       try {
-        const updatedProfile = await getUserByUID(user.uid);
-        setUserProfile(updatedProfile);
+        const freshProfile = await getUserByUID(user.uid);
+        setUserProfile(freshProfile);
+        emitProfileUpdate(freshProfile);
       } catch (error) {
         console.error('Error refreshing user profile:', error);
       }

@@ -27,7 +27,7 @@ export default function ProfilePicture({ user, getUserInitials, userProfile, onI
     try {
       await updateUser(user.uid, {
         photoURL: null,
-        photoPublicId: null
+        photoPath: null
       });
       
       toast.success("Profile image removed successfully!");
@@ -80,7 +80,7 @@ export default function ProfilePicture({ user, getUserInitials, userProfile, onI
           </Button>
         </div>
         <p className="text-sm text-gray-600">
-          Recommended: Square image, at least 400x400px, max 10MB
+          Recommended: Square image, at least 400x400px, max 2MB
         </p>
       </div>
 

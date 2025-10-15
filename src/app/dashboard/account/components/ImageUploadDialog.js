@@ -5,7 +5,8 @@ import { useDropzone } from "react-dropzone";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { uploadImageToCloudinary } from "@/lib/cloudinary";
+import { uploadProfileImage, testFirebaseStorageConfig } from "@/lib/firebaseStorage";
+import { uploadProfileImageSimple, testStorageAccess } from "@/lib/firebaseStorageAlt";
 import { updateUser } from "@/lib/firestore";
 import { toast } from "sonner";
 import { Upload, X, Image as ImageIcon, AlertCircle } from "lucide-react";
@@ -27,7 +28,7 @@ export default function ImageUploadDialog({
     if (rejectedFiles.length > 0) {
       const rejection = rejectedFiles[0];
       if (rejection.errors.some(e => e.code === 'file-too-large')) {
-        toast.error('File size must be less than 10MB');
+        toast.error('File size must be less than 2MB');
       } else if (rejection.errors.some(e => e.code === 'file-invalid-type')) {
         toast.error('Only JPEG, PNG, WebP, and GIF files are allowed');
       } else {
@@ -55,7 +56,7 @@ export default function ImageUploadDialog({
       'image/webp': ['.webp'],
       'image/gif': ['.gif']
     },
-    maxSize: 10 * 1024 * 1024, // 10MB
+    maxSize: 2 * 1024 * 1024, // 2MB
     multiple: false
   });
 
@@ -65,36 +66,35 @@ export default function ImageUploadDialog({
       return;
     }
 
+    // Test configuration before upload
+    if (!testFirebaseStorageConfig()) {
+      toast.error('Firebase Storage is not properly configured');
+      return;
+    }
+
     setUploading(true);
     setUploadProgress(0);
 
     try {
-      // Simulate progress updates
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return prev;
-          }
-          return prev + 10;
-        });
-      }, 200);
-
-      // Upload to Cloudinary
-      const uploadResult = await uploadImageToCloudinary(selectedFile);
+      let uploadResult;
       
-      // Update progress to 90%
-      setUploadProgress(90);
+      console.log('🔄 Starting profile image upload...');
+      
+      // Try simple upload directly (storage rules are now fixed)
+      setUploadProgress(25);
+      
+      uploadResult = await uploadProfileImageSimple(selectedFile, userId);
+      
+      setUploadProgress(90); // Almost complete
       
       // Update user profile in Firebase with new image URL
       await updateUser(userId, {
         photoURL: uploadResult.url,
-        photoPublicId: uploadResult.publicId // Store for potential deletion later
+        photoPath: uploadResult.path // Store path for potential deletion later
       });
       
-      // Complete progress
+      // Ensure progress shows 100%
       setUploadProgress(100);
-      clearInterval(progressInterval);
       
       toast.success('Profile image updated successfully!');
       
@@ -140,7 +140,7 @@ export default function ImageUploadDialog({
             Upload Profile Image
           </DialogTitle>
           <DialogDescription>
-            Choose an image file to upload. Maximum file size is 10MB.
+            Choose an image file to upload. Maximum file size is 2MB.
             Supported formats: JPEG, PNG, WebP, GIF.
           </DialogDescription>
         </DialogHeader>
@@ -167,7 +167,7 @@ export default function ImageUploadDialog({
                     Drag & drop an image here, or click to select
                   </p>
                   <p className="text-sm text-gray-500">
-                    Max file size: 10MB
+                    Max file size: 2MB
                   </p>
                 </div>
               )}

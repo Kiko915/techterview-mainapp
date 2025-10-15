@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import AuthGuard from "@/components/AuthGuard";
 import { useAuth } from "@/lib/useAuth";
 import { getUserByUID } from "@/lib/firestore";
+import { onProfileUpdate, offProfileUpdate } from "@/lib/profileEvents";
 import { logOut } from "@/lib/firebase";
 import Image from "next/image";
 import {
@@ -180,6 +181,21 @@ function TopNavbar() {
     fetchUserProfile();
   }, [user]);
 
+  // Listen for profile updates from other components
+  useEffect(() => {
+    const handleProfileUpdate = (updatedProfile) => {
+      if (updatedProfile && user && updatedProfile.uid === user.uid) {
+        setUserProfile(updatedProfile);
+      }
+    };
+
+    onProfileUpdate(handleProfileUpdate);
+    
+    return () => {
+      offProfileUpdate(handleProfileUpdate);
+    };
+  }, [user]);
+
   const handleLogout = async () => {
     try {
       await logOut();
@@ -251,7 +267,7 @@ function TopNavbar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="relative h-8 w-8 rounded-full">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={user?.photoURL} alt={userName} />
+                <AvatarImage src={userProfile?.photoURL || user?.photoURL} alt={userName} />
                 <AvatarFallback className="bg-[#354fd2] text-white text-sm">
                   {userInitials}
                 </AvatarFallback>

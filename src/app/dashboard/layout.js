@@ -186,7 +186,7 @@ function TopNavbar() {
       {/* Left side - Sidebar trigger */}
       <div className="flex items-center gap-4">
         <SidebarTrigger className="text-gray-600 hover:text-gray-900" />
-        <h1 className="text-lg font-semibold text-gray-900">{getPageTitle()}</h1>
+        <h1 className="text-lg font-semibold text-foreground">{getPageTitle()}</h1>
       </div>
 
       {/* Right side - Navigation items */}
@@ -256,7 +256,7 @@ export default function DashboardLayout({ children }) {
       <AppSidebar />
       <SidebarInset className="flex flex-col flex-1">
         <TopNavbar />
-        <main className="flex-1 overflow-auto bg-[#f0f7ff] p-6">
+        <main className="flex-1 overflow-auto bg-background p-6">
           {children}
         </main>
       </SidebarInset>

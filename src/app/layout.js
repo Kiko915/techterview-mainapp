@@ -1,5 +1,6 @@
 import { Playfair_Display, Montserrat } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 
 const playfairDisplay = Playfair_Display({
   variable: "--font-playfair-display",
@@ -24,8 +25,9 @@ export default function RootLayout({ children }) {
       <body
         className={`${playfairDisplay.variable} ${montserrat.variable} antialiased`} suppressHydrationWarning
       >
-        
-        {children}
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

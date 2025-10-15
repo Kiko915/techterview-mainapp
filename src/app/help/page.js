@@ -158,7 +158,7 @@ export default function HelpPage() {
   })).filter(category => category.faqs.length > 0);
 
   return (
-    <div className="min-h-screen bg-[#f0f7ff]">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-8">
@@ -184,10 +184,10 @@ export default function HelpPage() {
             <div className="inline-flex items-center justify-center w-16 h-16 bg-[#354fd2] rounded-full mb-4">
               <HelpCircle className="h-8 w-8 text-white" />
             </div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-4 font-playfair">
+            <h1 className="text-4xl font-bold text-foreground mb-4 font-playfair">
               How can we help you?
             </h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Find answers to common questions, get support, and learn how to make the most of TechTerview.
             </p>
           </div>
@@ -212,7 +212,7 @@ export default function HelpPage() {
 
         {searchQuery && (
           <div className="mb-6">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               {filteredCategories.reduce((total, cat) => total + cat.faqs.length, 0)} results for "{searchQuery}"
             </p>
           </div>
@@ -221,29 +221,29 @@ export default function HelpPage() {
         {/* Quick Links */}
         {!searchQuery && (
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Quick Help</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-6">Quick Help</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card className="hover:shadow-md transition-shadow cursor-pointer">
                 <CardContent className="p-6 text-center">
                   <Book className="h-8 w-8 text-[#354fd2] mx-auto mb-3" />
-                  <h3 className="font-semibold text-gray-900 mb-2">User Guide</h3>
-                  <p className="text-sm text-gray-600">Complete guide to using TechTerview</p>
+                  <h3 className="font-semibold text-foreground mb-2">User Guide</h3>
+                  <p className="text-sm text-muted-foreground">Complete guide to using TechTerview</p>
                 </CardContent>
               </Card>
               
               <Card className="hover:shadow-md transition-shadow cursor-pointer">
                 <CardContent className="p-6 text-center">
                   <MessageCircle className="h-8 w-8 text-[#354fd2] mx-auto mb-3" />
-                  <h3 className="font-semibold text-gray-900 mb-2">Live Chat</h3>
-                  <p className="text-sm text-gray-600">Chat with our support team</p>
+                  <h3 className="font-semibold text-foreground mb-2">Live Chat</h3>
+                  <p className="text-sm text-muted-foreground">Chat with our support team</p>
                 </CardContent>
               </Card>
               
               <Card className="hover:shadow-md transition-shadow cursor-pointer">
                 <CardContent className="p-6 text-center">
                   <Video className="h-8 w-8 text-[#354fd2] mx-auto mb-3" />
-                  <h3 className="font-semibold text-gray-900 mb-2">Video Tutorials</h3>
-                  <p className="text-sm text-gray-600">Learn with step-by-step videos</p>
+                  <h3 className="font-semibold text-foreground mb-2">Video Tutorials</h3>
+                  <p className="text-sm text-muted-foreground">Learn with step-by-step videos</p>
                 </CardContent>
               </Card>
             </div>
@@ -252,7 +252,7 @@ export default function HelpPage() {
 
         {/* FAQ Categories */}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Frequently Asked Questions</h2>
+          <h2 className="text-2xl font-bold text-foreground mb-6">Frequently Asked Questions</h2>
           <div className="space-y-6">
             {filteredCategories.map((category, categoryIndex) => (
               <Card key={categoryIndex}>
@@ -271,10 +271,10 @@ export default function HelpPage() {
                   <Accordion type="single" collapsible className="w-full">
                     {category.faqs.map((faq, faqIndex) => (
                       <AccordionItem key={faqIndex} value={`item-${categoryIndex}-${faqIndex}`}>
-                        <AccordionTrigger className="text-left font-medium text-gray-900 hover:no-underline">
+                        <AccordionTrigger className="text-left font-medium text-foreground hover:no-underline">
                           {faq.question}
                         </AccordionTrigger>
-                        <AccordionContent className="text-gray-600 leading-relaxed pt-2">
+                        <AccordionContent className="text-muted-foreground leading-relaxed pt-2">
                           {faq.answer}
                         </AccordionContent>
                       </AccordionItem>

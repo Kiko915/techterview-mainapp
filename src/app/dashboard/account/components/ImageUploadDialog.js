@@ -6,7 +6,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { uploadProfileImage, testFirebaseStorageConfig } from "@/lib/firebaseStorage";
-import { uploadProfileImageSimple, testStorageAccess } from "@/lib/firebaseStorageAlt";
 import { updateUser } from "@/lib/firestore";
 import { toast } from "sonner";
 import { Upload, X, Image as ImageIcon, AlertCircle } from "lucide-react";
@@ -80,12 +79,14 @@ export default function ImageUploadDialog({
       
       console.log('🔄 Starting profile image upload...');
       
-      // Try simple upload directly (storage rules are now fixed)
-      setUploadProgress(25);
-      
-      uploadResult = await uploadProfileImageSimple(selectedFile, userId);
-      
-      setUploadProgress(90); // Almost complete
+      // Upload to Firebase Storage with real progress tracking
+      uploadResult = await uploadProfileImage(
+        selectedFile, 
+        userId, 
+        (progress) => {
+          setUploadProgress(progress);
+        }
+      );
       
       // Update user profile in Firebase with new image URL
       await updateUser(userId, {

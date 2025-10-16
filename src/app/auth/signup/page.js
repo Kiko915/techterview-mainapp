@@ -10,7 +10,7 @@ import { Logo } from "@/components/ui/logo";
 import { Version } from "@/components/ui/version";
 import { Mail, Lock, Eye, EyeOff, Check, X } from "lucide-react";
 import { signUpWithEmail, signUpWithGoogle } from "@/lib/firebase";
-import { createUser } from "@/lib/firestore";
+import { createInitialUserDocument } from "@/lib/firestore";
 import GuestGuard from "@/components/GuestGuard";
 
 export default function SignupPage() {
@@ -114,14 +114,8 @@ export default function SignupPage() {
     try {
       const userCredential = await signUpWithEmail(formData.email, formData.password);
       
-      // Create user profile in Firestore
-      await createUser({
-        uid: userCredential.user.uid,
-        email: formData.email,
-        displayName: formData.email.split('@')[0], // Use email prefix as initial display name
-        profileComplete: false,
-        onboardingCompleted: false
-      });
+      // Create initial user document in Firestore with isNewUser flag
+      await createInitialUserDocument(userCredential.user);
       
       // Redirect to onboarding
       router.push("/onboarding");
@@ -151,14 +145,8 @@ export default function SignupPage() {
         return;
       }
       
-      // Create user profile in Firestore (new user)
-      await createUser({
-        uid: userCredential.user.uid,
-        email: userCredential.user.email,
-        displayName: userCredential.user.displayName || userCredential.user.email.split('@')[0],
-        profileComplete: false,
-        onboardingCompleted: false
-      });
+      // Create initial user document in Firestore with isNewUser flag
+      await createInitialUserDocument(userCredential.user);
       
       // Redirect to onboarding
       router.push("/onboarding");

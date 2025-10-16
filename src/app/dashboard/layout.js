@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import AuthGuard from "@/components/AuthGuard";
 import { useAuth } from "@/lib/useAuth";
 import { getUserByUID } from "@/lib/firestore";
 import { onProfileUpdate, offProfileUpdate } from "@/lib/profileEvents";
 import { logOut } from "@/lib/firebase";
+import { subscribeToUserNotifications, markNotificationAsRead } from "@/lib/notifications";
 import Image from "next/image";
 import {
   Sidebar,
@@ -47,6 +48,12 @@ import {
   HelpCircle,
   User,
   LogOut,
+  Check,
+  X,
+  Star,
+  Info,
+  AlertCircle,
+  CheckCircle,
 } from "lucide-react";
 
 // Navigation items for the sidebar
@@ -80,6 +87,11 @@ const navItems = [
     title: "Progress",
     url: "/dashboard/progress",
     icon: TrendingUp,
+  },
+  {
+    title: "Notifications",
+    url: "/dashboard/notifications",
+    icon: Bell,
   },
   {
     title: "Settings",
@@ -163,8 +175,10 @@ function AppSidebar() {
 
 function TopNavbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user } = useAuth();
   const [userProfile, setUserProfile] = useState(null);
+  const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -196,6 +210,22 @@ function TopNavbar() {
     };
   }, [user]);
 
+  // Subscribe to real-time notifications
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const unsubscribe = subscribeToUserNotifications(
+      user.uid,
+      (userNotifications) => {
+        setNotifications(userNotifications);
+      }
+    );
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [user?.uid]);
+
   const handleLogout = async () => {
     try {
       await logOut();
@@ -204,6 +234,49 @@ function TopNavbar() {
       console.error('Error logging out:', error);
     }
   };
+
+  // Handle marking notification as read
+  const handleMarkAsRead = async (notificationId) => {
+    try {
+      await markNotificationAsRead(notificationId);
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  // Get notification icon based on type
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'welcome':
+        return <Star className="h-4 w-4 text-yellow-500" />;
+      case 'success':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'warning':
+        return <AlertCircle className="h-4 w-4 text-orange-500" />;
+      case 'error':
+        return <AlertCircle className="h-4 w-4 text-red-500" />;
+      default:
+        return <Info className="h-4 w-4 text-blue-500" />;
+    }
+  };
+
+  // Format notification time
+  const formatNotificationTime = (date) => {
+    if (!date) return '';
+    const now = new Date();
+    const diff = now - date;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   const userName = userProfile?.displayName || userProfile?.username || user?.email?.split('@')[0] || 'User';
   const userInitials = userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -216,6 +289,7 @@ function TopNavbar() {
     if (pathname === '/dashboard/ai-mentor') return 'AI Mentor';
     if (pathname === '/dashboard/learning-path') return 'Learning Path';
     if (pathname === '/dashboard/progress') return 'Progress';
+    if (pathname === '/dashboard/notifications') return 'Notifications';
     if (pathname === '/dashboard/settings') return 'Settings';
     if (pathname === '/dashboard/account') return 'My Account';
     
@@ -242,13 +316,91 @@ function TopNavbar() {
       {/* Right side - Navigation items */}
       <div className="flex items-center gap-4">
         {/* Notifications */}
-        <Button variant="ghost" size="sm" className="relative">
-          <Bell className="h-5 w-5 text-gray-600" />
-          {/* Notification badge */}
-          <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-[10px] font-medium text-white flex items-center justify-center">
-            3
-          </span>
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="relative hover:bg-gray-100">
+              <Bell className="h-5 w-5 text-gray-600" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-[#354fd2] text-[10px] font-medium text-white flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-80 p-0" align="end" side="bottom">
+            <div className="border-b border-gray-200 px-4 py-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
+                {unreadCount > 0 && (
+                  <Badge className="bg-[#354fd2] text-white hover:bg-[#354fd2]">
+                    {unreadCount} new
+                  </Badge>
+                )}
+              </div>
+            </div>
+            <div className="max-h-80 overflow-y-auto p-4">
+              {notifications.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Bell className="h-8 w-8 text-gray-300 mb-2" />
+                  <p className="text-sm text-gray-500">No notifications yet</p>
+                  <p className="text-xs text-gray-400 mt-1">We'll notify you when something important happens</p>
+                </div>
+              ) : (
+                <div>
+                  {notifications.map((notification) => (
+                    <DropdownMenuItem
+                      key={notification.id}
+                      className={`p-4 focus:bg-gray-50 cursor-pointer ${
+                        !notification.isRead ? 'bg-blue-50/30' : ''
+                      }`}
+                      onClick={() => handleMarkAsRead(notification.id)}
+                    >
+                      <div className="flex items-start gap-3 w-full">
+                        <div className="flex-shrink-0 mt-0.5">
+                          {getNotificationIcon(notification.type)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <p className={`text-sm font-medium ${
+                              !notification.isRead ? 'text-gray-900' : 'text-gray-700'
+                            }`}>
+                              {notification.title}
+                            </p>
+                            {!notification.isRead && (
+                              <div className="w-2 h-2 rounded-full bg-[#354fd2] flex-shrink-0 ml-2"></div>
+                            )}
+                          </div>
+                          <p className={`text-sm mt-1 ${
+                            !notification.isRead ? 'text-gray-700' : 'text-gray-500'
+                          }`}>
+                            {notification.message}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-2">
+                            {formatNotificationTime(notification.createdAt)}
+                          </p>
+                        </div>
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                </div>
+              )}
+            </div>
+            {notifications.length > 0 && (
+              <div className="border-t border-gray-200 p-3">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="w-full text-[#354fd2] hover:bg-[#354fd2] hover:text-white text-xs font-medium"
+                  onClick={() => {
+                    router.push('/dashboard/notifications');
+                  }}
+                >
+                  View all notifications
+                </Button>
+              </div>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {/* Help */}
         <Button 

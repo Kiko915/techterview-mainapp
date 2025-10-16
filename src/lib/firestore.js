@@ -160,6 +160,36 @@ export const normalizeExistingUsernames = async () => {
   }
 };
 
+export const createInitialUserDocument = async (user) => {
+  try {
+    // Check if user document already exists
+    const existingUser = await getUserByUID(user.uid);
+    if (existingUser) {
+      console.log('User document already exists, skipping creation');
+      return existingUser;
+    }
+    
+    // Create initial user document with minimal data
+    const docRef = await addDoc(usersCollection, {
+      uid: user.uid,
+      email: user.email,
+      displayName: user.displayName || null,
+      photoURL: user.photoURL || null,
+      isNewUser: true, // This will trigger the welcome notification
+      onboardingCompleted: false,
+      profileComplete: false,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    
+    console.log('Initial user document created with ID:', docRef.id);
+    return { id: docRef.id, uid: user.uid };
+  } catch (error) {
+    console.error('Error creating initial user document:', error);
+    throw error;
+  }
+};
+
 export const updateUser = async (uid, updates) => {
   try {
     const processedUpdates = { ...updates };
@@ -178,6 +208,7 @@ export const updateUser = async (uid, updates) => {
       const docRef = await addDoc(usersCollection, {
         uid,
         ...processedUpdates,
+        isNewUser: true, // Mark as new user to trigger welcome notification
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });

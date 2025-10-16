@@ -16,7 +16,7 @@ export default function AccountPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('personal');
   const [userProfile, setUserProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [countries, setCountries] = useState([]);
   
   // Edit Profile Dialog States
@@ -61,8 +61,6 @@ export default function AccountPage() {
           });
         } catch (error) {
           console.error('Error fetching user profile:', error);
-        } finally {
-          setLoading(false);
         }
       }
     };
@@ -336,16 +334,7 @@ export default function AccountPage() {
     }
   ];
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  // Let Next.js loading.js handle initial route loading
 
   return (
     <div className="space-y-6">

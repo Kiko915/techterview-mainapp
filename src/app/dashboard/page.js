@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Progress } from "@/components/ui/progress";
 import { 
   BarChart3, 
   Code, 
@@ -13,7 +16,13 @@ import {
   Calendar,
   Clock,
   Target,
-  Trophy
+  Trophy,
+  Flame,
+  Star,
+  ArrowRight,
+  PlayCircle,
+  BookOpen,
+  Zap
 } from "lucide-react";
 import { useAuth } from "@/lib/useAuth";
 import { getUserByUID } from "@/lib/firestore";
@@ -38,214 +47,216 @@ export default function DashboardPage() {
   }, [user]);
 
   const userName = userProfile?.displayName || userProfile?.username || user?.email?.split('@')[0] || 'User';
+  const userInitials = userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  const currentTime = new Date().getHours();
+  const greeting = currentTime < 12 ? 'Good morning' : currentTime < 18 ? 'Good afternoon' : 'Good evening';
+
   return (
-    <div className="space-y-6">
-      {/* Welcome Section */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold text-gray-900">Welcome back, {userName}!</h1>
-        <p className="text-gray-600">
-          Ready to level up your interview skills? Here's your progress overview.
-        </p>
-      </div>
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-white border-gray-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Challenges Completed
-            </CardTitle>
-            <Code className="h-4 w-4 text-[#354fd2]" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">24</div>
-            <p className="text-xs text-green-600 mt-1">
-              +12% from last month
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white border-gray-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Mock Interviews
-            </CardTitle>
-            <Video className="h-4 w-4 text-[#354fd2]" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">8</div>
-            <p className="text-xs text-green-600 mt-1">
-              +3 this week
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white border-gray-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Study Streak
-            </CardTitle>
-            <Trophy className="h-4 w-4 text-[#354fd2]" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">15</div>
-            <p className="text-xs text-gray-600 mt-1">
-              days in a row
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white border-gray-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Overall Progress
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-[#354fd2]" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">78%</div>
-            <p className="text-xs text-green-600 mt-1">
-              +5% this week
-            </p>
+    <div>
+      {/* Greeting Card */}
+      <div className="p-6">
+        <Card className="bg-gradient-to-r from-[#354fd2] to-[#4a5fb8] text-white border-0 shadow-lg rounded-2xl overflow-hidden">
+          <CardContent className="p-8">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <p className="text-white/80 text-sm font-medium">{greeting},</p>
+                <h1 className="text-3xl font-bold">{userName}!</h1>
+                <p className="text-white/90 text-base mt-3 max-w-md">
+                  Ready to ace your next technical interview? Let's get started.
+                </p>
+                <div className="flex items-center gap-4 mt-4">
+                  <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-2">
+                    <Flame className="h-4 w-4 text-orange-300" />
+                    <span className="text-sm font-medium">15 day streak</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-2">
+                    <Star className="h-4 w-4 text-yellow-300" />
+                    <span className="text-sm font-medium">2,450 XP</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="hidden md:block">
+                <Avatar className="h-16 w-16 border-3 border-white/20 shadow-lg">
+                  <AvatarImage src={userProfile?.photoURL || user?.photoURL} alt={userName} />
+                  <AvatarFallback className="bg-white/20 text-white text-xl font-bold backdrop-blur-sm">
+                    {userInitials}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Activities & Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Activities */}
-        <Card className="bg-white border-gray-200">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-gray-900">Recent Activities</CardTitle>
-            <CardDescription>Your latest progress and achievements</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-              <div className="p-2 bg-[#354fd2] rounded-full">
-                <Code className="h-4 w-4 text-white" />
+      {/* Stats Grid */}
+      <div className="p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="p-6 bg-white border-0 shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="p-2 bg-[#354fd2] rounded-lg">
+                <Code className="h-5 w-5 text-white" />
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">
-                  Completed "Array Manipulation" challenge
-                </p>
-                <p className="text-xs text-gray-600">2 hours ago</p>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">24</p>
+                <p className="text-sm text-gray-600">Challenges</p>
               </div>
-              <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
-                +50 XP
-              </Badge>
             </div>
+          </Card>
 
-            <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg">
-              <div className="p-2 bg-purple-600 rounded-full">
-                <Video className="h-4 w-4 text-white" />
+          <Card className="p-6 bg-white border-0 shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="p-2 bg-[#354fd2] rounded-lg">
+                <Video className="h-5 w-5 text-white" />
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">
-                  Mock Interview with AI completed
-                </p>
-                <p className="text-xs text-gray-600">Yesterday</p>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">8</p>
+                <p className="text-sm text-gray-600">Interviews</p>
               </div>
-              <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
-                Score: 85%
-              </Badge>
             </div>
+          </Card>
 
-            <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg">
-              <div className="p-2 bg-orange-600 rounded-full">
-                <Bot className="h-4 w-4 text-white" />
+          <Card className="p-6 bg-white border-0 shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="p-2 bg-[#354fd2] rounded-lg">
+                <Flame className="h-5 w-5 text-white" />
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">
-                  AI Mentor session: "System Design Basics"
-                </p>
-                <p className="text-xs text-gray-600">2 days ago</p>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">15</p>
+                <p className="text-sm text-gray-600">Day Streak</p>
               </div>
-              <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100">
-                Completed
-              </Badge>
             </div>
-          </CardContent>
-        </Card>
+          </Card>
 
-        {/* Quick Actions */}
-        <Card className="bg-white border-gray-200">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-gray-900">Quick Actions</CardTitle>
-            <CardDescription>Jump into your practice sessions</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Button className="w-full justify-start h-12 bg-[#354fd2] hover:bg-[#2a3fa8] text-white">
-              <Code className="h-5 w-5 mr-3" />
-              Start Coding Challenge
-            </Button>
-
-            <Button 
-              variant="outline" 
-              className="w-full justify-start h-12 border-[#354fd2] text-[#354fd2] hover:bg-[#354fd2] hover:text-white"
-            >
-              <Video className="h-5 w-5 mr-3" />
-              Schedule Mock Interview
-            </Button>
-
-            <Button 
-              variant="outline" 
-              className="w-full justify-start h-12 border-purple-600 text-purple-600 hover:bg-purple-600 hover:text-white"
-            >
-              <Bot className="h-5 w-5 mr-3" />
-              Chat with AI Mentor
-            </Button>
-
-            <Button 
-              variant="outline" 
-              className="w-full justify-start h-12 border-green-600 text-green-600 hover:bg-green-600 hover:text-white"
-            >
-              <Target className="h-5 w-5 mr-3" />
-              Continue Learning Path
-            </Button>
-          </CardContent>
-        </Card>
+          <Card className="p-6 bg-white border-0 shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="p-2 bg-[#354fd2] rounded-lg">
+                <TrendingUp className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">78%</p>
+                <p className="text-sm text-gray-600">Progress</p>
+              </div>
+            </div>
+          </Card>
+        </div>
       </div>
 
-      {/* Upcoming Events */}
-      <Card className="bg-white border-gray-200">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-gray-900">Upcoming Events</CardTitle>
-          <CardDescription>Your scheduled sessions and deadlines</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg">
-              <div className="p-2 bg-blue-100 rounded-full">
-                <Calendar className="h-4 w-4 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">System Design Interview</p>
-                <p className="text-xs text-gray-600">Tomorrow, 2:00 PM</p>
-              </div>
-            </div>
+      {/* Main Content */}
+      <div className="px-6 pb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Quick Actions */}
+          <Card className="bg-white border-0 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-semibold text-gray-900">Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Link 
+                href="/challenges"
+                className="flex items-center justify-start w-full h-10 px-4 py-2 bg-[#354fd2] hover:bg-[#2a3fa8] text-white rounded-md text-sm font-medium transition-colors"
+              >
+                <Code className="h-4 w-4 mr-2" />
+                Start Challenge
+              </Link>
+              
+              <Link 
+                href="/mock-interviews"
+                className="flex items-center justify-start w-full h-10 px-4 py-2 border border-gray-200 hover:bg-gray-50 text-gray-900 rounded-md text-sm font-medium transition-colors"
+              >
+                <Video className="h-4 w-4 mr-2" />
+                Mock Interview
+              </Link>
+              
+              <Link 
+                href="/ai-mentor"
+                className="flex items-center justify-start w-full h-10 px-4 py-2 border border-gray-200 hover:bg-gray-50 text-gray-900 rounded-md text-sm font-medium transition-colors"
+              >
+                <Bot className="h-4 w-4 mr-2" />
+                AI Mentor
+              </Link>
+            </CardContent>
+          </Card>
 
-            <div className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg">
-              <div className="p-2 bg-green-100 rounded-full">
-                <Clock className="h-4 w-4 text-green-600" />
+          {/* Recent Activity */}
+          <Card className="bg-white border-0 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-semibold text-gray-900">Recent Activity</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-[#354fd2] rounded-lg">
+                  <Code className="h-4 w-4 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900 text-sm">Array Challenge</p>
+                  <p className="text-xs text-gray-500">2 hours ago</p>
+                </div>
+                <Badge className="bg-green-100 text-green-700">+50 XP</Badge>
               </div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">Daily Challenge</p>
-                <p className="text-xs text-gray-600">Available now</p>
-              </div>
-            </div>
 
-            <div className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg">
-              <div className="p-2 bg-purple-100 rounded-full">
-                <Bot className="h-4 w-4 text-purple-600" />
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-[#354fd2] rounded-lg">
+                  <Video className="h-4 w-4 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900 text-sm">Mock Interview</p>
+                  <p className="text-xs text-gray-500">Yesterday</p>
+                </div>
+                <Badge className="bg-blue-100 text-blue-700">85%</Badge>
               </div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">AI Mentor Session</p>
-                <p className="text-xs text-gray-600">Friday, 10:00 AM</p>
+
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-[#354fd2] rounded-lg">
+                  <Bot className="h-4 w-4 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900 text-sm">AI Session</p>
+                  <p className="text-xs text-gray-500">2 days ago</p>
+                </div>
+                <Badge className="bg-gray-100 text-gray-700">Done</Badge>
               </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+
+          {/* Upcoming */}
+          <Card className="bg-white border-0 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-semibold text-gray-900">Upcoming</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-[#354fd2] rounded-lg">
+                  <Calendar className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900 text-sm">System Design</p>
+                  <p className="text-xs text-gray-500">Tomorrow, 2:00 PM</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-[#354fd2] rounded-lg">
+                  <Zap className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900 text-sm">Daily Challenge</p>
+                  <p className="text-xs text-gray-500">Available now</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-[#354fd2] rounded-lg">
+                  <Bot className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900 text-sm">AI Mentor</p>
+                  <p className="text-xs text-gray-500">Friday, 10:00 AM</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

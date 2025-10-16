@@ -49,6 +49,11 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
 
+  /* Neutral colors for DottedGlowBackground */
+  --color-neutral-500: rgba(107, 114, 128, 1); /* gray-500 */
+  --color-neutral-600: rgba(75, 85, 99, 1); /* gray-600 */
+  --color-sky-800: rgba(7, 89, 133, 1); /* sky-800 */
+  
   /* Radius */
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);

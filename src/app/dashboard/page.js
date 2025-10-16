@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/useAuth";
 import { getUserByUID } from "@/lib/firestore";
+import DottedGlowBackground from "@/components/ui/dotted-glow-background";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -55,8 +57,33 @@ export default function DashboardPage() {
     <div>
       {/* Greeting Card */}
       <div className="p-6">
-        <Card className="bg-gradient-to-r from-[#354fd2] to-[#4a5fb8] text-white border-0 shadow-lg rounded-2xl overflow-hidden">
-          <CardContent className="p-8">
+        <Card className="bg-gradient-to-r from-[#354fd2] to-[#4a5fb8] text-white border-0 shadow-lg rounded-2xl overflow-hidden relative">
+          {/* DottedGlowBackground Effect */}
+          <DottedGlowBackground
+            className="pointer-events-none opacity-25"
+            opacity={1}
+            gap={15}
+            radius={2}
+            color="rgba(255, 255, 255, 0.3)"
+            glowColor="rgba(173, 216, 230, 0.8)"
+            backgroundOpacity={0}
+            speedMin={0.1}
+            speedMax={0.6}
+            speedScale={0.3}
+          />
+          
+          {/* Background Logo */}
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-8 hidden md:block z-20">
+            <Image
+              src="/logo/techterview_symbol_colored.png"
+              alt="TechTerview Background"
+              width={180}
+              height={180}
+              className="object-contain filter brightness-200"
+            />
+          </div>
+          
+          <CardContent className="p-8 relative z-30">
             <div className="flex items-center justify-between">
               <div className="space-y-2">
                 <p className="text-white/80 text-sm font-medium">{greeting},</p>
@@ -74,15 +101,6 @@ export default function DashboardPage() {
                     <span className="text-sm font-medium">2,450 XP</span>
                   </div>
                 </div>
-              </div>
-              
-              <div className="hidden md:block">
-                <Avatar className="h-16 w-16 border-3 border-white/20 shadow-lg">
-                  <AvatarImage src={userProfile?.photoURL || user?.photoURL} alt={userName} />
-                  <AvatarFallback className="bg-white/20 text-white text-xl font-bold backdrop-blur-sm">
-                    {userInitials}
-                  </AvatarFallback>
-                </Avatar>
               </div>
             </div>
           </CardContent>

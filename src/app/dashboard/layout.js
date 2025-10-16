@@ -16,6 +16,7 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
@@ -54,49 +55,81 @@ import {
   Info,
   AlertCircle,
   CheckCircle,
+  Home,
+  BookOpen,
+  Target,
+  Brain,
 } from "lucide-react";
 
-// Navigation items for the sidebar
-const navItems = [
+// Navigation sections for the sidebar
+const navSections = [
   {
-    title: "Overview",
-    url: "/dashboard",
-    icon: BarChart3,
+    title: "Dashboard",
+    items: [
+      {
+        title: "Overview",
+        url: "/dashboard",
+        icon: Home,
+        description: "Your main dashboard"
+      },
+    ]
   },
   {
-    title: "Coding Challenge",
-    url: "/dashboard/coding-challenge",
-    icon: Code,
+    title: "Practice & Learning",
+    items: [
+      {
+        title: "Coding Challenge",
+        url: "/dashboard/coding-challenge",
+        icon: Code,
+        description: "Solve coding problems"
+      },
+      {
+        title: "Mock Interviews",
+        url: "/dashboard/mock-interviews",
+        icon: Video,
+        description: "Practice interviews"
+      },
+      {
+        title: "AI Mentor",
+        url: "/dashboard/ai-mentor",
+        icon: Brain,
+        description: "Get AI guidance"
+      },
+      {
+        title: "Learning Path",
+        url: "/dashboard/learning-path",
+        icon: Map,
+        description: "Your learning journey"
+      },
+    ]
   },
   {
-    title: "Mock Interviews",
-    url: "/dashboard/mock-interviews",
-    icon: Video,
+    title: "Analytics",
+    items: [
+      {
+        title: "Progress",
+        url: "/dashboard/progress",
+        icon: TrendingUp,
+        description: "Track your improvement"
+      },
+    ]
   },
   {
-    title: "AI Mentor",
-    url: "/dashboard/ai-mentor",
-    icon: Bot,
-  },
-  {
-    title: "Learning Path",
-    url: "/dashboard/learning-path",
-    icon: Map,
-  },
-  {
-    title: "Progress",
-    url: "/dashboard/progress",
-    icon: TrendingUp,
-  },
-  {
-    title: "Notifications",
-    url: "/dashboard/notifications",
-    icon: Bell,
-  },
-  {
-    title: "Settings",
-    url: "/dashboard/settings",
-    icon: Settings,
+    title: "Account",
+    items: [
+      {
+        title: "Notifications",
+        url: "/dashboard/notifications",
+        icon: Bell,
+        description: "Your notifications"
+      },
+      {
+        title: "Settings",
+        url: "/dashboard/settings",
+        icon: Settings,
+        description: "Account settings"
+      },
+    ]
   },
 ];
 
@@ -106,67 +139,113 @@ function AppSidebar() {
   const isCollapsed = state === 'collapsed';
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-gray-200 bg-white">
-      <SidebarHeader className="p-4">
+    <Sidebar collapsible="icon" className="border-r border-gray-200 bg-gradient-to-b from-gray-50 to-white">
+      <SidebarHeader className={`${isCollapsed ? 'p-2' : 'p-4'} border-b border-gray-100`}>
         <div className="flex items-center justify-center">
           {isCollapsed ? (
-            <Image
-              src="/logo/techterview_symbol_colored.png"
-              alt="TechTerview"
-              width={32}
-              height={32}
-              className="object-contain"
-            />
+            <div className="w-10 h-10  flex items-center justify-center">
+              <Image
+                src="/logo/techterview_symbol_colored.png"
+                alt="TechTerview"
+                width={24}
+                height={24}
+                className="object-contain"
+              />
+            </div>
           ) : (
-            <Image
-              src="/logo/techterview_wordmark_colored.png"
-              alt="TechTerview"
-              width={140}
-              height={26}
-              className="object-contain"
-            />
+            <div className="flex flex-col items-center gap-3">
+              <Image
+                src="/logo/techterview_wordmark_colored.png"
+                alt="TechTerview"
+                width={120}
+                height={22}
+                className="object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.nextElementSibling.style.display = 'block';
+                }}
+              />
+              <div className="hidden text-xl font-bold text-[#354fd2]" style={{display: 'none'}}>
+                TechTerview
+              </div>
+            </div>
           )}
         </div>
       </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navItems.map((item) => {
-                const isActive = pathname === item.url;
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton 
-                      asChild 
-                      className={`${
-                        isActive 
-                          ? 'bg-[#354fd2] text-white hover:bg-[#2a3fa8]' 
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                      } transition-colors duration-200 ${isCollapsed ? 'justify-center' : ''}`}
-                      tooltip={isCollapsed ? item.title : undefined}
-                    >
-                      <Link 
-                        href={item.url} 
-                        className={`flex items-center ${
-                          isCollapsed ? 'justify-center w-full' : 'gap-3'
-                        }`}
+      
+      <SidebarContent className={`${isCollapsed ? 'px-0 py-3' : 'px-3 py-4'}`}>
+        {navSections.map((section, sectionIndex) => (
+          <SidebarGroup key={section.title} className={sectionIndex > 0 ? (isCollapsed ? 'mt-3' : 'mt-4') : ''}>
+            {!isCollapsed && (
+              <SidebarGroupLabel className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-3 mb-2">
+                {section.title}
+              </SidebarGroupLabel>
+            )}
+            <SidebarGroupContent>
+              <SidebarMenu className={`${isCollapsed ? 'space-y-2' : 'space-y-1'}`}>
+                {section.items.map((item) => {
+                  const isActive = pathname === item.url;
+                  return (
+                    <SidebarMenuItem key={item.title} className={isCollapsed ? 'flex justify-center' : ''}>
+                      <SidebarMenuButton 
+                        asChild 
+                        className={`${
+                          isActive 
+                            ? 'bg-[#354fd2] text-white hover:bg-[#2a3fa8] shadow-sm' 
+                            : 'text-gray-700 hover:bg-white hover:text-gray-900 hover:shadow-sm'
+                        } transition-all duration-200 rounded-lg ${
+                          isCollapsed 
+                            ? 'w-[44px] h-[44px] p-0 flex justify-center items-center' 
+                            : 'mx-1 px-4 py-6 w-full'
+                        } group relative`}
+                        tooltip={isCollapsed ? `${item.title} - ${item.description}` : undefined}
                       >
-                        <item.icon className="h-5 w-5" />
-                        {!isCollapsed && (
-                          <span className="font-medium">{item.title}</span>
-                        )}
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                        <Link 
+                          href={item.url} 
+                          className={`flex items-center ${
+                            isCollapsed ? 'w-[44px] h-[44px] justify-center' : 'w-full gap-4 justify-start'
+                          }`}
+                        >
+                          <item.icon className={`${
+                            isCollapsed ? 'h-5 w-5' : 'h-4 w-4'
+                          } flex-shrink-0`} />
+                          {!isCollapsed && (
+                            <div className="flex flex-col flex-1 min-w-0 py-1">
+                              <span className="font-medium text-sm truncate leading-5">
+                                {item.title}
+                              </span>
+                              <span className={`text-xs truncate leading-4 mt-0.5 ${
+                                isActive ? 'text-blue-100' : 'text-gray-500'
+                              }`}>
+                                {item.description}
+                              </span>
+                            </div>
+                          )}
+                          {!isCollapsed && isActive && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-white/80 flex-shrink-0"></div>
+                          )}
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+            {!isCollapsed && sectionIndex < navSections.length - 1 && (
+              <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent mx-3 mt-3"></div>
+            )}
+          </SidebarGroup>
+        ))}
       </SidebarContent>
-      <SidebarFooter className="p-4">
+      
+      <SidebarFooter className={`${isCollapsed ? 'p-2' : 'p-4'} border-t border-gray-100 bg-white/50`}>
         <div className="flex justify-center">
-          {!isCollapsed && <Version className="text-gray-500" />}
+          {!isCollapsed && (
+            <div className="text-center">
+              <Version className="text-gray-400 text-xs" />
+              <p className="text-xs text-gray-400 mt-1">TechTerview Dashboard</p>
+            </div>
+          )}
         </div>
       </SidebarFooter>
     </Sidebar>

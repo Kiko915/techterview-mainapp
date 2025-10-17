@@ -96,10 +96,10 @@ const navSections = [
         description: "Get AI guidance"
       },
       {
-        title: "Learning Path",
-        url: "/dashboard/learning-path",
+        title: "Interview Tracks",
+        url: "/dashboard/interview-tracks",
         icon: Map,
-        description: "Your learning journey"
+        description: "Your interview preparation tracks"
       },
     ]
   },
@@ -366,7 +366,7 @@ function TopNavbar() {
     if (pathname === '/dashboard/coding-challenge') return 'Coding Challenge';
     if (pathname === '/dashboard/mock-interviews') return 'Mock Interviews';
     if (pathname === '/dashboard/ai-mentor') return 'AI Mentor';
-    if (pathname === '/dashboard/learning-path') return 'Learning Path';
+    if (pathname === '/dashboard/interview-tracks') return 'Interview Tracks';
     if (pathname === '/dashboard/progress') return 'Progress';
     if (pathname === '/dashboard/notifications') return 'Notifications';
     if (pathname === '/dashboard/settings') return 'Settings';

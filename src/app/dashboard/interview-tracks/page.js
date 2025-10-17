@@ -21,7 +21,6 @@ import {
   Brain,
   Target,
   ArrowRight,
-  Star,
   PlayCircle,
   CheckCircle,
   Lock
@@ -216,7 +215,7 @@ export default function InterviewTracksPage() {
               description: data.description,
               imageUrl: data.image, // Firebase uses 'image' field
               difficulty: data.difficulty,
-              duration: `${data.estimatedTime} weeks`, // Convert estimatedTime to duration string
+              duration: `${data.estimatedTime} hours`, // Convert estimatedTime to duration string
               modules: data.modules || Math.ceil(data.estimatedTime * 1.5), // Calculate modules based on estimated time
               enrolled: data.enrolled || Math.floor(Math.random() * 1000) + 500, // Random enrollment if not provided
               rating: data.rating || (4.3 + Math.random() * 0.6), // Random rating if not provided
@@ -353,9 +352,8 @@ export default function InterviewTracksPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredTracks.map((track) => (
           <Card key={track.id} className="group hover:shadow-lg transition-all duration-300 border-0 shadow-sm overflow-hidden">
-            <div className="relative">
-              {/* Track Image */}
-              <div className="aspect-video relative overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
+            {/* Track Image */}
+            <div className="aspect-video relative overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
                 {track.imageUrl ? (
                   <Image
                     src={track.imageUrl}
@@ -406,7 +404,6 @@ export default function InterviewTracksPage() {
                   </div>
                 )}
               </div>
-            </div>
 
             <CardContent className="p-6">
               <div className="space-y-4">
@@ -439,21 +436,14 @@ export default function InterviewTracksPage() {
                 </div>
 
                 {/* Stats Row */}
-                <div className="flex items-center justify-between text-sm text-gray-500">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      <span>{track.duration}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <BookOpen className="h-4 w-4" />
-                      <span>{track.modules} modules</span>
-                    </div>
-                  </div>
-                  
+                <div className="flex items-center gap-4 text-sm text-gray-500">
                   <div className="flex items-center gap-1">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span className="font-medium">{typeof track.rating === 'number' ? track.rating.toFixed(1) : track.rating}</span>
+                    <Clock className="h-4 w-4" />
+                    <span>{track.duration}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <BookOpen className="h-4 w-4" />
+                    <span>{track.modules} modules</span>
                   </div>
                 </div>
 
@@ -518,22 +508,12 @@ export default function InterviewTracksPage() {
 
       {/* Coming Soon Section */}
       <Card className="bg-gradient-to-r from-[#354fd2] to-[#4a5fb8] text-white border-0">
-        <CardContent className="p-8 text-center">
-          <div className="space-y-4">
-            <div className="mx-auto w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
-              <Trophy className="h-8 w-8" />
-            </div>
-            <h3 className="text-xl font-bold">More Tracks Coming Soon!</h3>
-            <p className="text-white/90 max-w-md mx-auto">
-              We're continuously adding new interview tracks based on industry trends and student feedback. 
-              Stay tuned for specialized tracks in AI/ML, Blockchain, and more!
+        <CardContent className="p-6 text-center">
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold">More Tracks Coming Soon!</h3>
+            <p className="text-white/90 text-sm">
+              We're continuously adding new interview tracks based on industry trends and student feedback.
             </p>
-            <Button 
-              variant="secondary" 
-              className="bg-white text-[#354fd2] hover:bg-gray-100"
-            >
-              Get Notified
-            </Button>
           </div>
         </CardContent>
       </Card>

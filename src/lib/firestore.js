@@ -362,3 +362,78 @@ export const getQuestion = async (questionId) => {
     throw error;
   }
 };
+
+// Track Enrollment operations
+export const enrollUserInTrack = async (userId, trackId, enrollmentData) => {
+  try {
+    const enrollmentRef = collection(db, 'enrollments');
+    const docRef = await addDoc(enrollmentRef, {
+      userId,
+      trackId,
+      ...enrollmentData,
+      enrolledAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    return docRef.id;
+  } catch (error) {
+    console.error('Error enrolling user in track:', error);
+    throw error;
+  }
+};
+
+export const getUserEnrollment = async (userId, trackId) => {
+  try {
+    const enrollmentRef = collection(db, 'enrollments');
+    const q = query(
+      enrollmentRef, 
+      where('userId', '==', userId),
+      where('trackId', '==', trackId),
+      limit(1)
+    );
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      const doc = querySnapshot.docs[0];
+      return { id: doc.id, ...doc.data() };
+    }
+    return null;
+  } catch (error) {
+    console.error('Error getting user enrollment:', error);
+    throw error;
+  }
+};
+
+export const updateUserEnrollment = async (enrollmentId, updates) => {
+  try {
+    const docRef = doc(db, 'enrollments', enrollmentId);
+    await updateDoc(docRef, {
+      ...updates,
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error updating user enrollment:', error);
+    throw error;
+  }
+};
+
+export const getUserEnrollments = async (userId) => {
+  try {
+    const enrollmentRef = collection(db, 'enrollments');
+    const q = query(
+      enrollmentRef, 
+      where('userId', '==', userId),
+      orderBy('enrolledAt', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+    const enrollments = [];
+    
+    querySnapshot.forEach((doc) => {
+      enrollments.push({ id: doc.id, ...doc.data() });
+    });
+    
+    return enrollments;
+  } catch (error) {
+    console.error('Error getting user enrollments:', error);
+    throw error;
+  }
+};

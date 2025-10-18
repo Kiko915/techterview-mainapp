@@ -1,6 +1,12 @@
 "use client";
 
-import { useState } from "react";
+// TODO: Replace with your actual Tawk.to Property ID and Widget ID
+// Get these from your Tawk.to dashboard: Admin > Property > Chat Widget
+// Example: https://embed.tawk.to/60a12345abcd12345678/1f2a3b4c5d6e7f8g9
+const TAWK_PROPERTY_ID = "68f32319c65081194dc36918"; // Replace with your Property ID
+const TAWK_WIDGET_ID = "1j7qs26vt";     // Replace with your Widget ID
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,6 +35,86 @@ import {
 
 export default function HelpPage() {
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Tawk.to Integration
+  useEffect(() => {
+    // Only load if both IDs are configured
+    if (TAWK_PROPERTY_ID === "YOUR_PROPERTY_ID" || TAWK_WIDGET_ID === "YOUR_WIDGET_ID") {
+      console.warn("Please configure your Tawk.to Property ID and Widget ID in the help page component");
+      return;
+    }
+
+    // Check if script is already loaded
+    const existingScript = document.querySelector('script[src*="embed.tawk.to"]');
+    
+    if (!existingScript) {
+      // Load Tawk.to script
+      const script = document.createElement('script');
+      script.async = true;
+      script.src = `https://embed.tawk.to/${TAWK_PROPERTY_ID}/${TAWK_WIDGET_ID}`;
+      script.charset = 'UTF-8';
+      script.setAttribute('crossorigin', '*');
+      
+      // Add script to document
+      document.head.appendChild(script);
+
+      // Initialize Tawk_API
+      window.Tawk_API = window.Tawk_API || {};
+      window.Tawk_LoadStart = new Date();
+    }
+
+    // Show widget when script is ready
+    const showWidget = () => {
+      if (window.Tawk_API && window.Tawk_API.showWidget) {
+        window.Tawk_API.showWidget();
+      }
+    };
+
+    // Wait for Tawk.to to load, then show the widget
+    if (window.Tawk_API && window.Tawk_API.showWidget) {
+      showWidget();
+    } else {
+      // If not loaded yet, wait for it
+      const checkTawk = setInterval(() => {
+        if (window.Tawk_API && window.Tawk_API.showWidget) {
+          showWidget();
+          clearInterval(checkTawk);
+        }
+      }, 100);
+      
+      // Clear interval after 10 seconds to prevent infinite checking
+      setTimeout(() => clearInterval(checkTawk), 10000);
+    }
+
+    // Clean up function - hide widget when leaving help page
+    return () => {
+      if (window.Tawk_API && window.Tawk_API.hideWidget) {
+        window.Tawk_API.hideWidget();
+      }
+    };
+  }, []);
+
+  // Function to open live chat
+  const openLiveChat = () => {
+    if (window.Tawk_API && window.Tawk_API.maximize) {
+      // Use maximize to ensure the chat opens properly
+      window.Tawk_API.maximize();
+    } else if (window.Tawk_API && window.Tawk_API.toggle) {
+      window.Tawk_API.toggle();
+    } else if (window.Tawk_API && window.Tawk_API.showWidget) {
+      window.Tawk_API.showWidget();
+    } else {
+      // Wait a bit and try again if Tawk.to is still loading
+      setTimeout(() => {
+        if (window.Tawk_API && window.Tawk_API.maximize) {
+          window.Tawk_API.maximize();
+        } else {
+          console.warn('Tawk.to widget not ready yet. Please try again in a moment.');
+          alert('Live chat is loading. Please try again in a moment or contact us via email.');
+        }
+      }, 1000);
+    }
+  };
 
   // FAQ Categories
   const faqCategories = [
@@ -298,7 +384,11 @@ export default function HelpPage() {
                 <Mail className="h-4 w-4 mr-2" />
                 Email Support
               </Button>
-              <Button variant="secondary" className="border-white text-[#354fd2] hover:bg-gray-200">
+              <Button 
+                variant="secondary" 
+                className="border-white text-[#354fd2] hover:bg-gray-200"
+                onClick={openLiveChat}
+              >
                 <MessageCircle className="h-4 w-4 mr-2" />
                 Start Live Chat
               </Button>

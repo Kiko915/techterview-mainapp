@@ -98,6 +98,47 @@ export const useUserProfile = () => {
 };
 
 /**
+ * Custom hook for getting candidate count
+ */
+export const useCandidateCount = () => {
+  const [candidateCount, setCandidateCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCandidateCount = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch all users from Firestore
+        const usersRef = collection(db, "users");
+        const querySnapshot = await getDocs(usersRef);
+        
+        // Count users with role 'candidate'
+        let count = 0;
+        querySnapshot.docs.forEach(doc => {
+          const userData = doc.data();
+          if (userData.role === 'candidate') {
+            count++;
+          }
+        });
+        
+        setCandidateCount(count);
+      } catch (error) {
+        console.error("Error fetching candidate count:", error);
+        // Fallback to a reasonable number if there's an error
+        setCandidateCount(0);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCandidateCount();
+  }, []);
+
+  return { candidateCount, loading };
+};
+
+/**
  * Custom hook for managing track recommendations
  */
 export const useRecommendations = (userProfile, tracks) => {

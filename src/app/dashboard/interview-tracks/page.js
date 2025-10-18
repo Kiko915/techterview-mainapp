@@ -10,7 +10,7 @@ import {
   BookOpen, 
   Target
 } from "lucide-react";
-import { useTrackData, useUserProfile, useRecommendations } from "./hooks/useTrackData";
+import { useTrackData, useUserProfile, useRecommendations, useCandidateCount } from "./hooks/useTrackData";
 import TrackCard from "./components/TrackCard";
 import RecommendedTrack from "./components/RecommendedTrack";
 
@@ -21,6 +21,7 @@ export default function InterviewTracksPage() {
   const { tracks, loading } = useTrackData();
   const { userProfile } = useUserProfile();
   const { recommendedTrack } = useRecommendations(userProfile, tracks);
+  const { candidateCount, loading: candidateLoading } = useCandidateCount();
 
   // Filter out the recommended track from other tracks
   const categories = ["All", ...new Set(tracks.map(track => track.category))];
@@ -82,7 +83,12 @@ export default function InterviewTracksPage() {
           </div>
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            <span>{tracks.reduce((acc, track) => acc + (track.enrolled || 0), 0).toLocaleString()} students</span>
+            <span>
+              {candidateLoading 
+                ? "Loading..." 
+                : `${candidateCount.toLocaleString()} candidates`
+              }
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <Target className="h-4 w-4" />

@@ -29,27 +29,43 @@ export const useTrackData = () => {
         const querySnapshot = await getDocs(tracksRef);
         
         if (!querySnapshot.empty) {
-          const firestoreTracks = querySnapshot.docs.map(doc => {
-            const data = doc.data();
-            // Map Firebase data structure to our component structure
-            return {
-              id: doc.id,
-              title: data.title,
-              description: data.description,
-              imageUrl: data.image, // Firebase uses 'image' field
-              difficulty: data.difficulty,
-              duration: `${data.estimatedTime} hours`, // Convert estimatedTime to duration string
-              modules: data.modules || Math.ceil(data.estimatedTime * 1.5), // Calculate modules based on estimated time
-              enrolled: data.enrolled || Math.floor(Math.random() * 1000) + 500, // Random enrollment if not provided
-              rating: data.rating || (4.3 + Math.random() * 0.6), // Random rating if not provided
-              skills: data.skills || getSkillsByTrack(data.title), // Generate skills based on track title
-              color: getColorByTrack(data.title),
-              isLocked: data.isLocked || false,
-              completedModules: data.completedModules || 0,
-              category: getCategoryByTrack(data.title),
-              createdAt: data.createdAt
-            };
-          });
+          // Fetch tracks with their modules count
+          const firestoreTracks = await Promise.all(
+            querySnapshot.docs.map(async (doc) => {
+              const data = doc.data();
+              
+              // Fetch modules count from subcollection
+              let modulesCount = 0;
+              try {
+                const modulesRef = collection(db, "tracks", doc.id, "modules");
+                const modulesSnapshot = await getDocs(modulesRef);
+                modulesCount = modulesSnapshot.size;
+              } catch (modulesError) {
+                console.warn(`Error fetching modules for ${doc.id}:`, modulesError);
+                // Fallback to calculation if subcollection query fails
+                modulesCount = Math.ceil(data.estimatedTime * 1.5);
+              }
+              
+              // Map Firebase data structure to our component structure
+              return {
+                id: doc.id,
+                title: data.title,
+                description: data.description,
+                imageUrl: data.image, // Firebase uses 'image' field
+                difficulty: data.difficulty,
+                duration: `${data.estimatedTime} hours`, // Convert estimatedTime to duration string
+                modules: modulesCount, // Use actual modules count from subcollection
+                enrolled: data.enrolled || Math.floor(Math.random() * 1000) + 500, // Random enrollment if not provided
+                rating: data.rating || (4.3 + Math.random() * 0.6), // Random rating if not provided
+                skills: data.skills || getSkillsByTrack(data.title), // Generate skills based on track title
+                color: getColorByTrack(data.title),
+                isLocked: data.isLocked || false,
+                completedModules: data.completedModules || 0,
+                category: getCategoryByTrack(data.title),
+                createdAt: data.createdAt
+              };
+            })
+          );
           setTracks(firestoreTracks);
         } else {
           // No tracks found in Firestore

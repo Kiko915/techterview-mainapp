@@ -270,49 +270,42 @@ export default function TrackDetailPage() {
         Back to Interview Tracks
       </Button>
 
-      {/* Track Banner */}
-      <Card className="overflow-hidden border-0 shadow-lg">
-        <div className="aspect-[3/1] relative">
-          {track.imageUrl ? (
-            <Image
-              src={track.imageUrl}
-              alt={track.title}
-              fill
-              className="object-cover"
-              priority
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-              <BookOpen className="h-24 w-24 text-white/80" />
-            </div>
-          )}
-          
-          {/* Overlay */}
-          <div className="absolute inset-0 bg-black/40" />
-          
-          {/* Content Overlay */}
-          <div className="absolute inset-0 flex items-end">
-            <div className="p-8 text-white w-full">
-              <div className="flex items-center gap-3 mb-4">
-                <Badge className={`${difficultyColors[track.difficulty]} border-0`}>
-                  {track.difficulty}
-                </Badge>
-                <Badge className="bg-white/20 text-white border-0">
-                  {track.category}
-                </Badge>
-              </div>
-              
-              <h1 className="text-4xl font-playfair font-bold mb-3">
-                {track.title}
-              </h1>
-              
-              <p className="text-xl text-white/90 max-w-3xl">
-                {track.description}
-              </p>
-            </div>
+      {/* Track Image */}
+      <div className="w-full aspect-video relative rounded-lg overflow-hidden shadow-lg">
+        {track.imageUrl ? (
+          <Image
+            src={track.imageUrl}
+            alt={track.title}
+            fill
+            className="object-cover"
+            priority
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+            <BookOpen className="h-24 w-24 text-white/80" />
           </div>
+        )}
+      </div>
+
+      {/* Track Header */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <Badge className={`${difficultyColors[track.difficulty]} border-0`}>
+            {track.difficulty}
+          </Badge>
+          <Badge className="bg-[#354fd2]/10 text-[#354fd2] border-0">
+            {track.category}
+          </Badge>
         </div>
-      </Card>
+        
+        <h1 className="text-4xl font-playfair font-bold text-gray-900 dark:text-white">
+          {track.title}
+        </h1>
+        
+        <p className="text-xl text-gray-600 dark:text-gray-300 max-w-4xl leading-relaxed">
+          {track.description}
+        </p>
+      </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Main Content */}
@@ -411,16 +404,18 @@ export default function TrackDetailPage() {
                         </div>
                         <div>
                           <div className="font-medium">{module.title}</div>
-                          {module.description && (
-                            <div className="text-sm text-gray-600 dark:text-gray-400">
-                              {module.description}
-                            </div>
-                          )}
                         </div>
                       </div>
                     </AccordionTrigger>
                     <AccordionContent>
                       <div className="ml-11 space-y-3">
+                        {module.description && (
+                          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-[#354fd2]">
+                            <p className="text-sm text-gray-700 dark:text-gray-300">
+                              {module.description}
+                            </p>
+                          </div>
+                        )}
                         {module.lessons && module.lessons.length > 0 ? (
                           module.lessons.map((lesson, lessonIndex) => (
                             <div key={lessonIndex} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">

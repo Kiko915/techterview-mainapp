@@ -18,7 +18,6 @@ import {
   Clock, 
   Users, 
   BookOpen, 
-  Star,
   CheckCircle,
   PlayCircle,
   Lock,
@@ -27,10 +26,11 @@ import {
   Award
 } from "lucide-react";
 import { useAuth } from "@/lib/useAuth";
-import { enrollUserInTrack, getUserEnrollment } from "@/lib/firestore";
+import { enrollUserInTrack, getUserEnrollment, getTrackEnrollmentCount } from "@/lib/firestore";
 import { useToast } from "@/components/ui/use-toast";
 import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { useEnrollment } from "@/contexts/EnrollmentContext";
 // TEMPORARILY DISABLED: Complex imports that might cause loops
 // import { 
 //   getTrackById, 
@@ -80,6 +80,7 @@ export default function TrackDetailPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { updateEnrollment, triggerRefresh } = useEnrollment();
   
   const [track, setTrack] = useState(null);
   const [modules, setModules] = useState([]);
@@ -102,6 +103,9 @@ export default function TrackDetailPage() {
         if (trackSnap.exists()) {
           const data = trackSnap.data();
           
+          // Get the real enrollment count from enrollments collection
+          const realEnrollmentCount = await getTrackEnrollmentCount(params.trackId);
+          
           // Transform Firebase data to component format
           const trackData = {
             id: trackSnap.id,
@@ -110,8 +114,7 @@ export default function TrackDetailPage() {
             imageUrl: data.image,
             difficulty: data.difficulty,
             duration: `${data.estimatedTime} hours`,
-            enrolled: data.enrolled || Math.floor(Math.random() * 1000) + 500,
-            rating: data.rating || (4.3 + Math.random() * 0.6),
+            enrolled: realEnrollmentCount, // Use real enrollment count
             skills: data.skills || getSkillsByTrack(data.title),
             category: getCategoryByTrack(data.title),
             createdAt: data.createdAt
@@ -178,6 +181,19 @@ export default function TrackDetailPage() {
     checkEnrollment();
   }, [user, params.trackId]);
 
+  // Function to refresh enrollment status (can be called from child components)
+  const refreshEnrollmentStatus = async () => {
+    if (user && params.trackId) {
+      try {
+        const userEnrollment = await getUserEnrollment(user.uid, params.trackId);
+        setIsEnrolled(!!userEnrollment);
+        setEnrollment(userEnrollment);
+      } catch (error) {
+        console.error("Error refreshing enrollment:", error);
+      }
+    }
+  };
+
   const handleEnrollment = async () => {
     if (!user) {
       toast({
@@ -192,15 +208,37 @@ export default function TrackDetailPage() {
       setEnrolling(true);
       
       // Create enrollment in Firebase
-      await enrollUserInTrack(user.uid, params.trackId, {
+      const enrollmentData = {
         trackTitle: track.title,
         enrolledAt: new Date(),
         progress: 0,
         completedModules: [],
         currentModule: modules[0]?.id || null
-      });
+      };
       
+      await enrollUserInTrack(user.uid, params.trackId, enrollmentData);
+      
+      // Update local state immediately
       setIsEnrolled(true);
+      const newEnrollment = {
+        ...enrollmentData,
+        userId: user.uid,
+        trackId: params.trackId
+      };
+      setEnrollment(newEnrollment);
+
+      // Get the updated enrollment count from Firebase and update track data
+      const updatedEnrollmentCount = await getTrackEnrollmentCount(params.trackId);
+      setTrack(prevTrack => ({
+        ...prevTrack,
+        enrolled: updatedEnrollmentCount
+      }));
+
+      // Update enrollment context to sync with TrackCard components
+      updateEnrollment(params.trackId, true, newEnrollment);
+      
+      // Trigger refresh for all components
+      triggerRefresh();
       
       toast({
         title: "Successfully Enrolled!",
@@ -315,7 +353,7 @@ export default function TrackDetailPage() {
             <CardContent className="p-6">
               <h2 className="text-xl font-semibold mb-4">Track Overview</h2>
               
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <Clock className="h-6 w-6 text-[#354fd2] mx-auto mb-2" />
                   <div className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -339,20 +377,10 @@ export default function TrackDetailPage() {
                 <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <Users className="h-6 w-6 text-[#354fd2] mx-auto mb-2" />
                   <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {track.enrolled?.toLocaleString() || '1,000+'}
+                    {track.enrolled?.toLocaleString() || '0'}
                   </div>
                   <div className="text-sm text-gray-600 dark:text-gray-400">
                     Enrolled
-                  </div>
-                </div>
-                
-                <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <Star className="h-6 w-6 text-[#354fd2] mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {track.rating?.toFixed(1) || '4.8'}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    Rating
                   </div>
                 </div>
               </div>
@@ -468,7 +496,19 @@ export default function TrackDetailPage() {
                     <Progress value={progressPercentage} className="h-2" />
                   </div>
                   
-                  <Button className="w-full bg-[#354fd2] hover:bg-[#2a3fa8]">
+                  <Button className="w-full bg-[#354fd2] hover:bg-[#2a3fa8]" onClick={() => {
+                    // You can navigate to the first incomplete module or just stay on this page
+                    const firstIncompleteModule = modules.find(module => 
+                      !enrollment?.completedModules?.includes(module.id)
+                    );
+                    if (firstIncompleteModule) {
+                      // For now, we'll just show a toast about starting the first module
+                      toast({
+                        title: "Ready to Learn!",
+                        description: `Starting with: ${firstIncompleteModule.title}`,
+                      });
+                    }
+                  }}>
                     <PlayCircle className="h-4 w-4 mr-2" />
                     Continue Learning
                   </Button>

@@ -9,6 +9,7 @@ import { getUserByUID } from "@/lib/firestore";
 import { onProfileUpdate, offProfileUpdate } from "@/lib/profileEvents";
 import { logOut } from "@/lib/firebase";
 import { subscribeToUserNotifications, markNotificationAsRead } from "@/lib/notifications";
+import { EnrollmentProvider } from "@/contexts/EnrollmentContext";
 import Image from "next/image";
 import {
   Sidebar,
@@ -544,15 +545,17 @@ function TopNavbar() {
 export default function DashboardLayout({ children }) {
   return (
     <AuthGuard requireOnboarding={true}>
-      <SidebarProvider className="min-h-screen">
-        <AppSidebar />
-        <SidebarInset className="flex flex-col flex-1">
-          <TopNavbar />
-          <main className="flex-1 overflow-auto bg-background p-6">
-            {children}
-          </main>
-        </SidebarInset>
-      </SidebarProvider>
+      <EnrollmentProvider>
+        <SidebarProvider className="min-h-screen">
+          <AppSidebar />
+          <SidebarInset className="flex flex-col flex-1">
+            <TopNavbar />
+            <main className="flex-1 overflow-auto bg-background p-6">
+              {children}
+            </main>
+          </SidebarInset>
+        </SidebarProvider>
+      </EnrollmentProvider>
     </AuthGuard>
   );
 }

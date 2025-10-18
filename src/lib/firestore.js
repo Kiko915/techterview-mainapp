@@ -10,7 +10,8 @@ import {
   where, 
   orderBy, 
   limit,
-  serverTimestamp 
+  serverTimestamp,
+  increment 
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -366,6 +367,14 @@ export const getQuestion = async (questionId) => {
 // Track Enrollment operations
 export const enrollUserInTrack = async (userId, trackId, enrollmentData) => {
   try {
+    // First, check if user is already enrolled to prevent duplicate enrollments
+    const existingEnrollment = await getUserEnrollment(userId, trackId);
+    if (existingEnrollment) {
+      console.log('User is already enrolled in this track');
+      return existingEnrollment.id;
+    }
+
+    // Create enrollment record
     const enrollmentRef = collection(db, 'enrollments');
     const docRef = await addDoc(enrollmentRef, {
       userId,
@@ -374,6 +383,14 @@ export const enrollUserInTrack = async (userId, trackId, enrollmentData) => {
       enrolledAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
+
+    // Increment the enrollment count in the tracks document
+    const trackRef = doc(db, 'tracks', trackId);
+    await updateDoc(trackRef, {
+      enrolled: increment(1),
+      updatedAt: serverTimestamp()
+    });
+
     return docRef.id;
   } catch (error) {
     console.error('Error enrolling user in track:', error);
@@ -434,6 +451,19 @@ export const getUserEnrollments = async (userId) => {
     return enrollments;
   } catch (error) {
     console.error('Error getting user enrollments:', error);
+    throw error;
+  }
+};
+
+// Get total enrollment count for a track
+export const getTrackEnrollmentCount = async (trackId) => {
+  try {
+    const enrollmentRef = collection(db, 'enrollments');
+    const q = query(enrollmentRef, where('trackId', '==', trackId));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.size;
+  } catch (error) {
+    console.error('Error getting track enrollment count:', error);
     throw error;
   }
 };

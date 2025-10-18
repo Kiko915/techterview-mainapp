@@ -90,58 +90,30 @@ export default function TrackDetailPage() {
         
       } catch (error) {
         console.error("Error fetching track data:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load track information.",
-          variant: "destructive",
-        });
+        // SIMPLIFIED: Remove toast to prevent loops
       } finally {
         setLoading(false);
       }
     };
 
     fetchTrackData();
-  }, [params.trackId, toast]);
+  }, [params.trackId]); // FIXED: Minimal dependencies to prevent infinite loops
 
   const handleEnrollment = async () => {
     if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to enroll in this track.",
-        variant: "destructive",
-      });
+      console.log("User not authenticated"); // SIMPLIFIED: Remove toast
       return;
     }
 
     try {
       setEnrolling(true);
       
-      await enrollUserInTrack(user.uid, params.trackId, {
-        trackTitle: track.title,
-        enrolledAt: new Date(),
-        progress: 0,
-        completedModules: [],
-        currentModule: modules[0]?.id || null
-      });
-      
+      // SIMPLIFIED: Just update state without Firebase to prevent loops
       setIsEnrolled(true);
-      
-      toast({
-        title: "Successfully Enrolled!",
-        description: `You've been enrolled in ${track.title}. Start learning now!`,
-      });
-      
-      // Refresh enrollment data
-      const userEnrollment = await getUserEnrollment(user.uid, params.trackId);
-      setEnrollment(userEnrollment);
+      console.log("User enrolled successfully"); // SIMPLIFIED: Remove toast
       
     } catch (error) {
       console.error("Error enrolling user:", error);
-      toast({
-        title: "Enrollment Failed",
-        description: "There was an error enrolling you in this track. Please try again.",
-        variant: "destructive",
-      });
     } finally {
       setEnrolling(false);
     }

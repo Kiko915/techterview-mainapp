@@ -166,14 +166,14 @@ function AppSidebar() {
                   e.currentTarget.nextElementSibling.style.display = 'block';
                 }}
               />
-              <div className="hidden text-xl font-bold text-[#354fd2]" style={{display: 'none'}}>
+              <div className="hidden text-xl font-bold text-[#354fd2]" style={{ display: 'none' }}>
                 TechTerview
               </div>
             </div>
           )}
         </div>
       </SidebarHeader>
-      
+
       <SidebarContent className={`${isCollapsed ? 'px-0 py-3' : 'px-3 py-4'}`}>
         {navSections.map((section, sectionIndex) => (
           <SidebarGroup key={section.title} className={sectionIndex > 0 ? (isCollapsed ? 'mt-3' : 'mt-4') : ''}>
@@ -188,36 +188,31 @@ function AppSidebar() {
                   const isActive = pathname === item.url;
                   return (
                     <SidebarMenuItem key={item.title} className={isCollapsed ? 'flex justify-center' : ''}>
-                      <SidebarMenuButton 
-                        asChild 
-                        className={`${
-                          isActive 
-                            ? 'bg-[#354fd2] text-white hover:bg-[#2a3fa8] shadow-sm' 
-                            : 'text-gray-700 hover:bg-white hover:text-gray-900 hover:shadow-sm'
-                        } transition-all duration-200 rounded-lg ${
-                          isCollapsed 
-                            ? 'w-[44px] h-[44px] p-0 flex justify-center items-center' 
+                      <SidebarMenuButton
+                        asChild
+                        className={`${isActive
+                          ? 'bg-[#354fd2] text-white hover:bg-[#2a3fa8] shadow-sm'
+                          : 'text-gray-700 hover:bg-white hover:text-gray-900 hover:shadow-sm'
+                          } transition-all duration-200 rounded-lg ${isCollapsed
+                            ? 'w-[44px] h-[44px] p-0 flex justify-center items-center'
                             : 'mx-1 px-4 py-6 w-full'
-                        } group relative`}
+                          } group relative`}
                         tooltip={isCollapsed ? `${item.title} - ${item.description}` : undefined}
                       >
-                        <Link 
-                          href={item.url} 
-                          className={`flex items-center ${
-                            isCollapsed ? 'w-[44px] h-[44px] justify-center' : 'w-full gap-4 justify-start'
-                          }`}
+                        <Link
+                          href={item.url}
+                          className={`flex items-center ${isCollapsed ? 'w-[44px] h-[44px] justify-center' : 'w-full gap-4 justify-start'
+                            }`}
                         >
-                          <item.icon className={`${
-                            isCollapsed ? 'h-5 w-5' : 'h-4 w-4'
-                          } flex-shrink-0`} />
+                          <item.icon className={`${isCollapsed ? 'h-5 w-5' : 'h-4 w-4'
+                            } flex-shrink-0`} />
                           {!isCollapsed && (
                             <div className="flex flex-col flex-1 min-w-0 py-1">
                               <span className="font-medium text-sm truncate leading-5">
                                 {item.title}
                               </span>
-                              <span className={`text-xs truncate leading-4 mt-0.5 ${
-                                isActive ? 'text-blue-100' : 'text-gray-500'
-                              }`}>
+                              <span className={`text-xs truncate leading-4 mt-0.5 ${isActive ? 'text-blue-100' : 'text-gray-500'
+                                }`}>
                                 {item.description}
                               </span>
                             </div>
@@ -238,7 +233,7 @@ function AppSidebar() {
           </SidebarGroup>
         ))}
       </SidebarContent>
-      
+
       <SidebarFooter className={`${isCollapsed ? 'p-2' : 'p-4'} border-t border-gray-100 bg-white/50`}>
         <div className="flex justify-center">
           {!isCollapsed && (
@@ -284,7 +279,7 @@ function TopNavbar() {
     };
 
     onProfileUpdate(handleProfileUpdate);
-    
+
     return () => {
       offProfileUpdate(handleProfileUpdate);
     };
@@ -360,7 +355,7 @@ function TopNavbar() {
 
   const userName = userProfile?.displayName || userProfile?.username || user?.email?.split('@')[0] || 'User';
   const userInitials = userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  
+
   // Function to get page title based on current path
   const getPageTitle = () => {
     if (pathname === '/dashboard') return 'Overview';
@@ -372,7 +367,7 @@ function TopNavbar() {
     if (pathname === '/dashboard/notifications') return 'Notifications';
     if (pathname === '/dashboard/settings') return 'Settings';
     if (pathname === '/dashboard/account') return 'My Account';
-    
+
     // Fallback for any other dashboard routes
     const pathSegments = pathname.split('/').filter(Boolean);
     if (pathSegments.length > 1) {
@@ -381,7 +376,7 @@ function TopNavbar() {
         .map(word => word.charAt(0).toUpperCase() + word.slice(1))
         .join(' ');
     }
-    
+
     return 'Dashboard';
   };
 
@@ -430,9 +425,8 @@ function TopNavbar() {
                   {notifications.map((notification) => (
                     <DropdownMenuItem
                       key={notification.id}
-                      className={`p-4 focus:bg-gray-50 cursor-pointer ${
-                        !notification.isRead ? 'bg-blue-50/30' : ''
-                      }`}
+                      className={`p-4 focus:bg-gray-50 cursor-pointer ${!notification.isRead ? 'bg-blue-50/30' : ''
+                        }`}
                       onClick={() => handleMarkAsRead(notification.id)}
                     >
                       <div className="flex items-start gap-3 w-full">
@@ -441,18 +435,16 @@ function TopNavbar() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <p className={`text-sm font-medium ${
-                              !notification.isRead ? 'text-gray-900' : 'text-gray-700'
-                            }`}>
+                            <p className={`text-sm font-medium ${!notification.isRead ? 'text-gray-900' : 'text-gray-700'
+                              }`}>
                               {notification.title}
                             </p>
                             {!notification.isRead && (
                               <div className="w-2 h-2 rounded-full bg-[#354fd2] flex-shrink-0 ml-2"></div>
                             )}
                           </div>
-                          <p className={`text-sm mt-1 ${
-                            !notification.isRead ? 'text-gray-700' : 'text-gray-500'
-                          }`}>
+                          <p className={`text-sm mt-1 ${!notification.isRead ? 'text-gray-700' : 'text-gray-500'
+                            }`}>
                             {notification.message}
                           </p>
                           <p className="text-xs text-gray-400 mt-2">
@@ -467,9 +459,9 @@ function TopNavbar() {
             </div>
             {notifications.length > 0 && (
               <div className="border-t border-gray-200 p-3">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   className="w-full text-[#354fd2] hover:bg-[#354fd2] hover:text-white text-xs font-medium"
                   onClick={() => {
                     router.push('/dashboard/notifications');
@@ -483,9 +475,9 @@ function TopNavbar() {
         </DropdownMenu>
 
         {/* Help */}
-        <Button 
+        <Button
           asChild
-          size="sm" 
+          size="sm"
           className="bg-[#354fd2] text-white hover:bg-[#2a3fa8] transition-colors"
         >
           <Link href="/help">
@@ -512,7 +504,7 @@ function TopNavbar() {
                 <div className="flex items-center gap-2">
                   <p className="font-medium text-sm">{userName}</p>
                   {userProfile?.role && (userProfile.role === 'candidate' || userProfile.role === 'recruiter') && (
-                    <Badge 
+                    <Badge
                       variant={userProfile.role === 'candidate' ? 'default' : 'secondary'}
                       className="text-xs capitalize"
                     >
@@ -543,14 +535,17 @@ function TopNavbar() {
 }
 
 export default function DashboardLayout({ children }) {
+  const pathname = usePathname();
+  const isLessonPage = pathname?.includes('/lesson/');
+
   return (
     <AuthGuard requireOnboarding={true}>
       <EnrollmentProvider>
-        <SidebarProvider className="min-h-screen">
+        <SidebarProvider className={`min-h-screen ${isLessonPage ? 'h-screen overflow-hidden' : ''}`}>
           <AppSidebar />
           <SidebarInset className="flex flex-col flex-1">
             <TopNavbar />
-            <main className="flex-1 overflow-auto bg-background p-6">
+            <main className={`flex-1 bg-background ${isLessonPage ? 'p-0 overflow-hidden' : 'p-6 overflow-auto'}`}>
               {children}
             </main>
           </SidebarInset>

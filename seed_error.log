@@ -1,0 +1,8 @@
+≡ƒÜÇ Starting to seed tracks and modules from files...
+
+Processing track: track-frontend (Frontend Developer Track)
+Γ£à Track updated: track-frontend
+
+Γ¥î Error seeding tracks: TypeError: Cannot read properties of undefined (reading 'map')
+    at seedTracks (file:///C:/Users/ASUS-Pc/Documents/LSPU%20Files/3rd%20Year/1st%20Sem/CMSC%20308/final_proj/techterview-webapp/scripts/seedTracks.mjs:325:57)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)

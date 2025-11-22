@@ -1,9 +1,10 @@
-import { 
-  BookOpen, 
-  Code, 
-  Database, 
-  Smartphone, 
-  Globe, 
+
+import {
+  BookOpen,
+  Code,
+  Database,
+  Smartphone,
+  Globe,
   Server,
   Brain,
   Target
@@ -14,7 +15,7 @@ import { db } from "@/lib/firebase";
 // Difficulty color mappings
 export const difficultyColors = {
   "Beginner": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-400",
-  "Intermediate": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-400", 
+  "Intermediate": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-400",
   "Advanced": "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-400"
 };
 
@@ -99,7 +100,7 @@ export const getTrackById = async (trackId) => {
   try {
     const trackRef = doc(db, "tracks", trackId);
     const trackSnap = await getDoc(trackRef);
-    
+
     if (trackSnap.exists()) {
       const data = trackSnap.data();
       return {
@@ -129,7 +130,7 @@ export const getTrackModules = async (trackId) => {
   try {
     const modulesRef = collection(db, "tracks", trackId, "modules");
     const modulesSnap = await getDocs(modulesRef);
-    
+
     const modules = [];
     modulesSnap.docs.forEach(doc => {
       const data = doc.data();
@@ -147,11 +148,29 @@ export const getTrackModules = async (trackId) => {
         order: data.order || 0
       });
     });
-    
+
     // Sort by order
     return modules.sort((a, b) => a.order - b.order);
   } catch (error) {
     console.error("Error fetching track modules:", error);
+    throw error;
+  }
+};
+
+// Get specific lesson by ID
+export const getLessonById = async (trackId, moduleId, lessonId) => {
+  try {
+    const moduleRef = doc(db, "tracks", trackId, "modules", moduleId);
+    const moduleSnap = await getDoc(moduleRef);
+
+    if (moduleSnap.exists()) {
+      const data = moduleSnap.data();
+      const lesson = data.lessons?.find(l => l.id === lessonId);
+      return lesson || null;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching lesson:", error);
     throw error;
   }
 };

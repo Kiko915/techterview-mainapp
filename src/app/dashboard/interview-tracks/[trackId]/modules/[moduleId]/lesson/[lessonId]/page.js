@@ -6,11 +6,11 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { getLessonById, getTrackModules, getTrackById } from '../../../../../utils';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Code } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Code, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/useAuth';
-import { getUserEnrollment, updateUserEnrollment } from '@/lib/firestore';
+import { getUserEnrollment, updateUserEnrollment, getUserChallengeProgress } from '@/lib/firestore';
 import { useEnrollment } from "@/contexts/EnrollmentContext";
 import QuizComponent from './components/QuizComponent';
 import CodeBlock from './components/CodeBlock';
@@ -26,6 +26,7 @@ export default function LessonPage() {
     const [track, setTrack] = useState(null);
     const [modules, setModules] = useState([]);
     const [enrollment, setEnrollment] = useState(null);
+    const [challengeProgress, setChallengeProgress] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -54,6 +55,12 @@ export default function LessonPage() {
                 if (user) {
                     const enrollmentData = await getUserEnrollment(user.uid, trackId);
                     setEnrollment(enrollmentData);
+
+                    // Check for challenge progress if this lesson has a challenge
+                    if (lessonData.challengeId) {
+                        const progress = await getUserChallengeProgress(user.uid, lessonData.challengeId);
+                        setChallengeProgress(progress);
+                    }
                 }
 
             } catch (error) {
@@ -247,10 +254,21 @@ export default function LessonPage() {
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">{lesson.title}</h1>
 
                 {lesson.challengeId && (
-                    <Button className="gap-2 bg-[#354fd2] hover:bg-[#2a3fca] text-white">
-                        <Code className="h-4 w-4" />
-                        Start Coding Challenge
-                    </Button>
+                    <div className="flex flex-col gap-2">
+                        {challengeProgress?.status === 'completed' ? (
+                            <div className="flex items-center gap-2 text-green-600 bg-green-50 p-3 rounded-md border border-green-200">
+                                <CheckCircle2 className="h-5 w-5" />
+                                <span className="font-medium">Challenge Completed!</span>
+                            </div>
+                        ) : (
+                            <Link href={`/dashboard/coding-challenge/${lesson.challengeId}`}>
+                                <Button className="gap-2 bg-[#354fd2] hover:bg-[#2a3fca] text-white w-full md:w-auto">
+                                    <Code className="h-4 w-4" />
+                                    Start Coding Challenge
+                                </Button>
+                            </Link>
+                        )}
+                    </div>
                 )}
             </div>
 
@@ -342,9 +360,17 @@ export default function LessonPage() {
                 ) : (
                     <Button
                         onClick={() => handleCompleteLesson(null)}
-                        className="gap-2 h-auto py-4 px-6 bg-green-600 hover:bg-green-700 text-white"
+                        disabled={lesson.challengeId && challengeProgress?.status !== 'completed'}
+                        className={`gap-2 h-auto py-4 px-6 text-white ${lesson.challengeId && challengeProgress?.status !== 'completed'
+                            ? "bg-gray-400 cursor-not-allowed"
+                            : "bg-green-600 hover:bg-green-700"
+                            }`}
                     >
-                        Complete Track
+                        {lesson.challengeId && challengeProgress?.status !== 'completed' ? (
+                            <span>Complete Challenge First</span>
+                        ) : (
+                            <span>Complete Track</span>
+                        )}
                         <ChevronRight className="h-4 w-4" />
                     </Button>
                 )}

@@ -8,12 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import { 
-  BarChart3, 
-  Code, 
-  Video, 
-  Bot, 
-  TrendingUp, 
+import {
+  BarChart3,
+  Code,
+  Video,
+  Bot,
+  TrendingUp,
   Calendar,
   Clock,
   Target,
@@ -26,32 +26,90 @@ import {
   Zap
 } from "lucide-react";
 import { useAuth } from "@/lib/useAuth";
-import { getUserByUID } from "@/lib/firestore";
+import {
+  getUserByUID,
+  getUserStats,
+  getUserEnrollments,
+  getNextLessonForUser,
+  getAllChallenges,
+  getUserCompletedChallenges
+} from "@/lib/firestore";
 import DottedGlowBackground from "@/components/ui/dotted-glow-background";
+import DashboardSkeleton from "./components/DashboardSkeleton";
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const [userProfile, setUserProfile] = useState(null);
+  const [stats, setStats] = useState({
+    streak: 0,
+    totalXP: 0,
+    challengesCompleted: 0,
+    interviewsCompleted: 0,
+    recentActivity: []
+  });
+  const [upcoming, setUpcoming] = useState({
+    nextLesson: null,
+    dailyChallenge: null,
+    recommendedTopic: null
+  });
+  const [enrollments, setEnrollments] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUserProfile = async () => {
+    const fetchData = async () => {
       if (user) {
         try {
-          const profile = await getUserByUID(user.uid);
+          setLoading(true);
+          const [profile, userStats, userEnrollments, nextLesson, allChallenges, completedIds] = await Promise.all([
+            getUserByUID(user.uid),
+            getUserStats(user.uid),
+            getUserEnrollments(user.uid),
+            getNextLessonForUser(user.uid),
+            getAllChallenges(),
+            getUserCompletedChallenges(user.uid)
+          ]);
+
           setUserProfile(profile);
+          if (userStats) setStats(userStats);
+          if (userEnrollments) setEnrollments(userEnrollments);
+
+          // Setup Upcoming Data
+          const uncompletedChallenges = allChallenges.filter(c => !completedIds.includes(c.id));
+          const randomChallenge = uncompletedChallenges.length > 0
+            ? uncompletedChallenges[Math.floor(Math.random() * uncompletedChallenges.length)]
+            : null;
+
+          const interviewTopics = ["System Design", "Behavioral", "Algorithms", "Frontend Architecture", "Database Design"];
+          const randomTopic = interviewTopics[Math.floor(Math.random() * interviewTopics.length)];
+
+          setUpcoming({
+            nextLesson,
+            dailyChallenge: randomChallenge,
+            recommendedTopic: randomTopic
+          });
+
         } catch (error) {
-          console.error('Error fetching user profile:', error);
+          console.error('Error fetching dashboard data:', error);
+        } finally {
+          setLoading(false);
         }
       }
     };
 
-    fetchUserProfile();
+    fetchData();
   }, [user]);
 
   const userName = userProfile?.displayName || userProfile?.username || user?.email?.split('@')[0] || 'User';
-  const userInitials = userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   const currentTime = new Date().getHours();
   const greeting = currentTime < 12 ? 'Good morning' : currentTime < 18 ? 'Good afternoon' : 'Good evening';
+
+  const overallProgress = enrollments.length > 0
+    ? Math.round(enrollments.reduce((acc, curr) => acc + (curr.progress || 0), 0) / enrollments.length)
+    : 0;
+
+  if (loading) {
+    return <DashboardSkeleton />;
+  }
 
   return (
     <div>
@@ -71,7 +129,7 @@ export default function DashboardPage() {
             speedMax={0.6}
             speedScale={0.3}
           />
-          
+
           {/* Background Logo */}
           <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-8 hidden md:block z-20">
             <Image
@@ -82,7 +140,7 @@ export default function DashboardPage() {
               className="object-contain filter brightness-200"
             />
           </div>
-          
+
           <CardContent className="p-8 relative z-30">
             <div className="flex items-center justify-between">
               <div className="space-y-2">
@@ -94,11 +152,11 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-4 mt-4">
                   <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-2">
                     <Flame className="h-4 w-4 text-orange-300" />
-                    <span className="text-sm font-medium">15 day streak</span>
+                    <span className="text-sm font-medium">{stats.streak} day streak</span>
                   </div>
                   <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-2">
                     <Star className="h-4 w-4 text-yellow-300" />
-                    <span className="text-sm font-medium">2,450 XP</span>
+                    <span className="text-sm font-medium">{stats.totalXP.toLocaleString()} XP</span>
                   </div>
                 </div>
               </div>
@@ -116,7 +174,7 @@ export default function DashboardPage() {
                 <Code className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900">24</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.challengesCompleted}</p>
                 <p className="text-sm text-gray-600">Challenges</p>
               </div>
             </div>
@@ -128,7 +186,7 @@ export default function DashboardPage() {
                 <Video className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900">8</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.interviewsCompleted}</p>
                 <p className="text-sm text-gray-600">Interviews</p>
               </div>
             </div>
@@ -140,7 +198,7 @@ export default function DashboardPage() {
                 <Flame className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900">15</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.streak}</p>
                 <p className="text-sm text-gray-600">Day Streak</p>
               </div>
             </div>
@@ -152,7 +210,7 @@ export default function DashboardPage() {
                 <TrendingUp className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900">78%</p>
+                <p className="text-2xl font-bold text-gray-900">{overallProgress}%</p>
                 <p className="text-sm text-gray-600">Progress</p>
               </div>
             </div>
@@ -169,24 +227,24 @@ export default function DashboardPage() {
               <CardTitle className="text-lg font-semibold text-gray-900">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Link 
-                href="/challenges"
+              <Link
+                href="/dashboard/coding-challenge"
                 className="flex items-center justify-start w-full h-10 px-4 py-2 bg-[#354fd2] hover:bg-[#2a3fa8] text-white rounded-md text-sm font-medium transition-colors"
               >
                 <Code className="h-4 w-4 mr-2" />
                 Start Challenge
               </Link>
-              
-              <Link 
-                href="/mock-interviews"
+
+              <Link
+                href="/dashboard/mock-interviews"
                 className="flex items-center justify-start w-full h-10 px-4 py-2 border border-gray-200 hover:bg-gray-50 text-gray-900 rounded-md text-sm font-medium transition-colors"
               >
                 <Video className="h-4 w-4 mr-2" />
                 Mock Interview
               </Link>
-              
-              <Link 
-                href="/ai-mentor"
+
+              <Link
+                href="/dashboard/ai-mentor"
                 className="flex items-center justify-start w-full h-10 px-4 py-2 border border-gray-200 hover:bg-gray-50 text-gray-900 rounded-md text-sm font-medium transition-colors"
               >
                 <Bot className="h-4 w-4 mr-2" />
@@ -201,38 +259,35 @@ export default function DashboardPage() {
               <CardTitle className="text-lg font-semibold text-gray-900">Recent Activity</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-[#354fd2] rounded-lg">
-                  <Code className="h-4 w-4 text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-gray-900 text-sm">Array Challenge</p>
-                  <p className="text-xs text-gray-500">2 hours ago</p>
-                </div>
-                <Badge className="bg-green-100 text-green-700">+50 XP</Badge>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-[#354fd2] rounded-lg">
-                  <Video className="h-4 w-4 text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-gray-900 text-sm">Mock Interview</p>
-                  <p className="text-xs text-gray-500">Yesterday</p>
-                </div>
-                <Badge className="bg-blue-100 text-blue-700">85%</Badge>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-[#354fd2] rounded-lg">
-                  <Bot className="h-4 w-4 text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-gray-900 text-sm">AI Session</p>
-                  <p className="text-xs text-gray-500">2 days ago</p>
-                </div>
-                <Badge className="bg-gray-100 text-gray-700">Done</Badge>
-              </div>
+              {stats.recentActivity.length > 0 ? (
+                stats.recentActivity.map((activity, index) => (
+                  <div key={index} className="flex items-center gap-3">
+                    <div className="p-2 bg-[#354fd2] rounded-lg">
+                      {activity.type === 'challenge' ? <Code className="h-4 w-4 text-white" /> :
+                        activity.type === 'interview' ? <Video className="h-4 w-4 text-white" /> :
+                          <Bot className="h-4 w-4 text-white" />}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900 text-sm">
+                        {activity.type === 'challenge' ? 'Coding Challenge' :
+                          activity.type === 'interview' ? 'Mock Interview' : 'Quiz Completed'}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {activity.date ? new Date(activity.date).toLocaleDateString() : 'Recently'}
+                      </p>
+                    </div>
+                    <Badge className={`
+                      ${activity.type === 'challenge' ? 'bg-green-100 text-green-700' :
+                        activity.type === 'interview' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}
+                    `}>
+                      {activity.type === 'challenge' ? '+50 XP' :
+                        activity.type === 'interview' ? '+100 XP' : '+20 XP'}
+                    </Badge>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-gray-500 text-center py-4">No recent activity</p>
+              )}
             </CardContent>
           </Card>
 
@@ -242,34 +297,66 @@ export default function DashboardPage() {
               <CardTitle className="text-lg font-semibold text-gray-900">Upcoming</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Next Lesson */}
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-[#354fd2] rounded-lg">
-                  <Calendar className="h-4 w-4 text-white" />
+                  <BookOpen className="h-4 w-4 text-white" />
                 </div>
-                <div>
-                  <p className="font-medium text-gray-900 text-sm">System Design</p>
-                  <p className="text-xs text-gray-500">Tomorrow, 2:00 PM</p>
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900 text-sm">
+                    {upcoming.nextLesson ? 'Continue Learning' : 'Start a Track'}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate max-w-[180px]">
+                    {upcoming.nextLesson
+                      ? `${upcoming.nextLesson.trackTitle}: ${upcoming.nextLesson.title}`
+                      : 'Enroll in a track to get started'}
+                  </p>
                 </div>
+                {upcoming.nextLesson && (
+                  <Link href={`/dashboard/interview-tracks/${upcoming.nextLesson.trackId}/modules/${upcoming.nextLesson.moduleId}/lesson/${upcoming.nextLesson.lessonId}`}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                )}
               </div>
 
+              {/* Daily Challenge */}
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-[#354fd2] rounded-lg">
                   <Zap className="h-4 w-4 text-white" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <p className="font-medium text-gray-900 text-sm">Daily Challenge</p>
-                  <p className="text-xs text-gray-500">Available now</p>
+                  <p className="text-xs text-gray-500 truncate max-w-[180px]">
+                    {upcoming.dailyChallenge ? upcoming.dailyChallenge.title : 'All caught up!'}
+                  </p>
                 </div>
+                {upcoming.dailyChallenge && (
+                  <Link href={`/dashboard/coding-challenge/${upcoming.dailyChallenge.id}`}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                )}
               </div>
 
+              {/* Recommended Practice */}
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-[#354fd2] rounded-lg">
-                  <Bot className="h-4 w-4 text-white" />
+                  <Video className="h-4 w-4 text-white" />
                 </div>
-                <div>
-                  <p className="font-medium text-gray-900 text-sm">AI Mentor</p>
-                  <p className="text-xs text-gray-500">Friday, 10:00 AM</p>
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900 text-sm">Recommended Practice</p>
+                  <p className="text-xs text-gray-500">
+                    {upcoming.recommendedTopic ? `${upcoming.recommendedTopic} Interview` : 'Mock Interview'}
+                  </p>
                 </div>
+                <Link href="/dashboard/mock-interviews">
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>

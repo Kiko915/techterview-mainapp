@@ -91,8 +91,9 @@ const tracksData = [
                     duration: "10 hours",
                     order: 4,
                     lessons: [
-                        { id: 'fe-interview-questions', title: "Common Frontend Interview Questions", duration: "60 min", type: "article", challengeId: null },
-                        { id: 'fe-coding-challenges', title: "Live Coding Challenges", duration: "120 min", type: "article", challengeId: "fe-challenge-1" },
+                        { id: 'fe-challenge-palindrome', title: "Challenge: Valid Palindrome", duration: "30 min", type: "article", challengeId: "js-valid-palindrome" },
+                        { id: 'fe-challenge-flatten', title: "Challenge: Deep Flatten", duration: "45 min", type: "article", challengeId: "js-deep-flatten" },
+                        { id: 'fe-challenge-emitter', title: "Challenge: Event Emitter", duration: "60 min", type: "article", challengeId: "js-event-emitter" },
                         { id: 'fe-system-design', title: "Frontend System Design", duration: "90 min", type: "article", challengeId: null },
                         { id: 'fe-behavioral', title: "Behavioral Questions for Frontend", duration: "45 min", type: "article", challengeId: null }
                     ]
@@ -182,8 +183,9 @@ const tracksData = [
                     duration: "10 hours",
                     order: 4,
                     lessons: [
-                        { id: 'be-api-design', title: "API Design Challenges", duration: "90 min", type: "article", challengeId: "be-challenge-1" },
-                        { id: 'be-schema-design', title: "Database Schema Design Problems", duration: "90 min", type: "article", challengeId: "be-challenge-2" },
+                        { id: 'be-challenge-parentheses', title: "Challenge: Valid Parentheses", duration: "30 min", type: "article", challengeId: "py-valid-parentheses" },
+                        { id: 'be-challenge-anagrams', title: "Challenge: Group Anagrams", duration: "45 min", type: "article", challengeId: "py-group-anagrams" },
+                        { id: 'be-challenge-lru', title: "Challenge: LRU Cache", duration: "60 min", type: "article", challengeId: "py-lru-cache" },
                         { id: 'be-system-design', title: "System Design Interview Practice", duration: "120 min", type: "article", challengeId: null },
                         { id: 'be-mock-interview', title: "Mock Backend Interview", duration: "60 min", type: "article", challengeId: null }
                     ]

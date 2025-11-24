@@ -536,16 +536,20 @@ function TopNavbar() {
 
 export default function DashboardLayout({ children }) {
   const pathname = usePathname();
-  const isLessonPage = pathname?.includes('/lesson/');
+  // Check if the current page should be full screen (no padding, hidden overflow)
+  // This applies to lesson pages and specific coding challenge pages (not the lobby)
+  const isFullScreenPage =
+    pathname?.includes('/lesson/') ||
+    (pathname?.includes('/coding-challenge/') && pathname.split('/').length > 3);
 
   return (
     <AuthGuard requireOnboarding={true}>
       <EnrollmentProvider>
-        <SidebarProvider className={`min-h-screen ${isLessonPage ? 'h-screen overflow-hidden' : ''}`}>
+        <SidebarProvider className={`min-h-screen ${isFullScreenPage ? 'h-screen overflow-hidden' : ''}`}>
           <AppSidebar />
           <SidebarInset className="flex flex-col flex-1">
             <TopNavbar />
-            <main className={`flex-1 bg-background ${isLessonPage ? 'p-0 overflow-hidden' : 'p-6 overflow-auto'}`}>
+            <main className={`flex-1 bg-background ${isFullScreenPage ? 'p-0 overflow-hidden' : 'p-6 overflow-auto'}`}>
               {children}
             </main>
           </SidebarInset>

@@ -5,18 +5,22 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
-import { getUserEnrollment } from "@/lib/firestore";
+import { getUserEnrollment, getUserCompletedChallenges } from "@/lib/firestore";
 import ChallengeList from "./components/ChallengeList";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Sparkles, Code2, Server } from "lucide-react";
 
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 export default function CodingChallengeLobby() {
     const { user } = useAuth();
     const [challenges, setChallenges] = useState([]);
     const [enrolledTracks, setEnrolledTracks] = useState([]);
+    const [completedIds, setCompletedIds] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("frontend");
+    const [difficultyFilter, setDifficultyFilter] = useState("all");
 
     useEffect(() => {
         const fetchData = async () => {
@@ -31,8 +35,12 @@ export default function CodingChallengeLobby() {
                 }));
                 setChallenges(challengesData);
 
-                // 2. Fetch user enrollments if logged in
+                // 2. Fetch user enrollments and completed challenges if logged in
                 if (user) {
+                    // Fetch completed challenges
+                    const completed = await getUserCompletedChallenges(user.uid);
+                    setCompletedIds(completed);
+
                     // This is a bit tricky since enrollments are subcollections or separate docs.
                     // Assuming we can get a list of trackIds the user is enrolled in.
                     // For now, let's just fetch all enrollments we can find or assume a structure.
@@ -65,8 +73,16 @@ export default function CodingChallengeLobby() {
     }, [user]);
 
     // Filter logic
-    const frontendChallenges = challenges.filter(c => c.category === "frontend" || c.category === "universal");
-    const backendChallenges = challenges.filter(c => c.category === "backend" || c.category === "universal");
+    const filterChallenges = (category) => {
+        return challenges.filter(c => {
+            const matchesCategory = c.category === category || c.category === "universal";
+            const matchesDifficulty = difficultyFilter === "all" || c.difficulty.toLowerCase() === difficultyFilter.toLowerCase();
+            return matchesCategory && matchesDifficulty;
+        });
+    };
+
+    const frontendChallenges = filterChallenges("frontend");
+    const backendChallenges = filterChallenges("backend");
 
     // Recommendation logic
     const recommendedChallenges = challenges.filter(c => {
@@ -152,7 +168,7 @@ export default function CodingChallengeLobby() {
     }
 
     return (
-        <div className="container py-8 space-y-8">
+        <div className="container space-y-8">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight font-playfair">Coding Challenges</h1>
                 <p className="text-muted-foreground mt-2">
@@ -180,23 +196,45 @@ export default function CodingChallengeLobby() {
                         <Sparkles className="h-5 w-5" />
                         <h2 className="text-xl font-semibold">Recommended for You</h2>
                     </div>
-                    <ChallengeList challenges={recommendedChallenges} />
+                    <ChallengeList challenges={recommendedChallenges} completedIds={completedIds} />
                 </section>
             )}
 
             {/* Main List with Role Toggle */}
             <section className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <h2 className="text-xl font-semibold">Explore Challenges</h2>
+
+                    {/* Difficulty Filter */}
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">Difficulty:</span>
+                        <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
+                            <SelectTrigger className="w-[140px]">
+                                <SelectValue placeholder="All" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Levels</SelectItem>
+                                <SelectItem value="easy">Easy</SelectItem>
+                                <SelectItem value="medium">Medium</SelectItem>
+                                <SelectItem value="hard">Hard</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
 
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="grid w-full max-w-[400px] grid-cols-2 mb-8">
-                        <TabsTrigger value="frontend" className="gap-2">
+                    <TabsList className="grid w-full max-w-[400px] grid-cols-2 mb-8 bg-muted/50 p-1 rounded-lg">
+                        <TabsTrigger
+                            value="frontend"
+                            className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-300"
+                        >
                             <Code2 className="h-4 w-4" />
                             Frontend Prep
                         </TabsTrigger>
-                        <TabsTrigger value="backend" className="gap-2">
+                        <TabsTrigger
+                            value="backend"
+                            className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-300"
+                        >
                             <Server className="h-4 w-4" />
                             Backend Prep
                         </TabsTrigger>
@@ -206,14 +244,14 @@ export default function CodingChallengeLobby() {
                         <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg text-sm text-blue-500 mb-4">
                             <strong>Focus:</strong> JavaScript internals, DOM manipulation, Closures, and Async patterns.
                         </div>
-                        <ChallengeList challenges={frontendChallenges} />
+                        <ChallengeList challenges={frontendChallenges} completedIds={completedIds} />
                     </TabsContent>
 
                     <TabsContent value="backend" className="space-y-4">
                         <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-lg text-sm text-orange-500 mb-4">
                             <strong>Focus:</strong> Algorithms, Data Structures, Python efficiency, and System logic.
                         </div>
-                        <ChallengeList challenges={backendChallenges} />
+                        <ChallengeList challenges={backendChallenges} completedIds={completedIds} />
                     </TabsContent>
                 </Tabs>
             </section>

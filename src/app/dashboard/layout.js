@@ -540,7 +540,8 @@ export default function DashboardLayout({ children }) {
   // This applies to lesson pages and specific coding challenge pages (not the lobby)
   const isFullScreenPage =
     pathname?.includes('/lesson/') ||
-    (pathname?.includes('/coding-challenge/') && pathname.split('/').length > 3);
+    (pathname?.includes('/coding-challenge/') && pathname.split('/').length > 3) ||
+    pathname?.includes('/dashboard/ai-mentor');
 
   return (
     <AuthGuard requireOnboarding={true}>

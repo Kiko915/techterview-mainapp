@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/useAuth';
-import { getUserChatSessions, createChatSession, getChatMessages, deleteChatSession } from '@/lib/firestore';
+import { getUserChatSessions, createChatSession, getChatMessages, deleteChatSession, getUserByUID } from '@/lib/firestore';
 import ChatInterface from './components/ChatInterface';
 import {
     Dialog,
@@ -18,7 +18,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'next/navigation';
 
 export default function AIMentorPage() {
-    const { user, loading: authLoading } = useAuth();
+    const { user: authUser, loading: authLoading } = useAuth();
+    const [user, setUser] = useState(null);
     const [sessions, setSessions] = useState([]);
     const [selectedSessionId, setSelectedSessionId] = useState(null);
     const [messages, setMessages] = useState([]);
@@ -26,6 +27,36 @@ export default function AIMentorPage() {
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [sessionToDelete, setSessionToDelete] = useState(null);
     const router = useRouter();
+
+    // Fetch Firestore user data when authUser changes
+    useEffect(() => {
+        const fetchUserData = async () => {
+            if (authUser) {
+                try {
+                    const firestoreUser = await getUserByUID(authUser.uid);
+                    if (firestoreUser) {
+                        // Merge Auth user with Firestore user, prioritizing Firestore data
+                        setUser({
+                            ...authUser,
+                            ...firestoreUser,
+                            // Ensure photoURL is correctly set from Firestore if available
+                            photoURL: firestoreUser.photoURL || authUser.photoURL,
+                            displayName: firestoreUser.displayName || authUser.displayName
+                        });
+                    } else {
+                        setUser(authUser);
+                    }
+                } catch (error) {
+                    console.error("Error fetching user data:", error);
+                    setUser(authUser);
+                }
+            } else {
+                setUser(null);
+            }
+        };
+
+        fetchUserData();
+    }, [authUser]);
 
     // Fetch sessions on load
     useEffect(() => {
@@ -107,9 +138,18 @@ export default function AIMentorPage() {
         );
     }
 
-    if (!user) {
-        router.push('/login');
+    if (!authUser) {
+        router.push('/auth/login');
         return null;
+    }
+
+    // Show loading state while fetching Firestore data
+    if (!user) {
+        return (
+            <div className="flex items-center justify-center h-screen">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+        );
     }
 
     return (

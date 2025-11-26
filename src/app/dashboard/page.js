@@ -265,12 +265,14 @@ export default function DashboardPage() {
                     <div className="p-2 bg-[#354fd2] rounded-lg">
                       {activity.type === 'challenge' ? <Code className="h-4 w-4 text-white" /> :
                         activity.type === 'interview' ? <Video className="h-4 w-4 text-white" /> :
-                          <Bot className="h-4 w-4 text-white" />}
+                          activity.type === 'lesson' ? <BookOpen className="h-4 w-4 text-white" /> :
+                            <Bot className="h-4 w-4 text-white" />}
                     </div>
                     <div className="flex-1">
                       <p className="font-medium text-gray-900 text-sm">
                         {activity.type === 'challenge' ? 'Coding Challenge' :
-                          activity.type === 'interview' ? 'Mock Interview' : 'Quiz Completed'}
+                          activity.type === 'interview' ? 'Mock Interview' :
+                            activity.type === 'lesson' ? 'Lesson Completed' : 'Quiz Completed'}
                       </p>
                       <p className="text-xs text-gray-500">
                         {activity.date ? new Date(activity.date).toLocaleDateString() : 'Recently'}
@@ -278,10 +280,12 @@ export default function DashboardPage() {
                     </div>
                     <Badge className={`
                       ${activity.type === 'challenge' ? 'bg-green-100 text-green-700' :
-                        activity.type === 'interview' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}
+                        activity.type === 'interview' ? 'bg-blue-100 text-blue-700' :
+                          activity.type === 'lesson' ? 'bg-indigo-100 text-indigo-700' : 'bg-purple-100 text-purple-700'}
                     `}>
                       {activity.type === 'challenge' ? '+50 XP' :
-                        activity.type === 'interview' ? '+100 XP' : '+20 XP'}
+                        activity.type === 'interview' ? '+100 XP' :
+                          activity.type === 'lesson' ? '+10 XP' : '+20 XP'}
                     </Badge>
                   </div>
                 ))

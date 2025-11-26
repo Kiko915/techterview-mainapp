@@ -5,6 +5,7 @@ import {
     where
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { getUserLessonCompletions } from './lessons';
 
 // Dashboard Stats operations
 export const getUserStats = async (userId) => {
@@ -13,10 +14,11 @@ export const getUserStats = async (userId) => {
         const interviewQuery = query(collection(db, 'interviews'), where('userId', '==', userId));
         const quizQuery = query(collection(db, 'quiz_results'), where('userId', '==', userId));
 
-        const [challengeSnap, interviewSnap, quizSnap] = await Promise.all([
+        const [challengeSnap, interviewSnap, quizSnap, lessonCompletions] = await Promise.all([
             getDocs(challengeQuery),
             getDocs(interviewQuery),
-            getDocs(quizQuery)
+            getDocs(quizQuery),
+            getUserLessonCompletions(userId)
         ]);
 
         // Helper to safely get date
@@ -35,17 +37,18 @@ export const getUserStats = async (userId) => {
         const challengeDocs = challengeSnap.docs.map(d => ({ ...d.data(), id: d.id, type: 'challenge', date: getDate(d.data()) }));
         const interviewDocs = interviewSnap.docs.map(d => ({ ...d.data(), id: d.id, type: 'interview', date: getDate(d.data()) }));
         const quizDocs = quizSnap.docs.map(d => ({ ...d.data(), id: d.id, type: 'quiz', date: getDate(d.data()) }));
+        const lessonDocs = lessonCompletions.map(l => ({ ...l, type: 'lesson', date: getDate(l) }));
 
         // Filter for completed items
         const completedChallenges = challengeDocs.filter(c => c.status === 'completed');
         const passedQuizzes = quizDocs.filter(q => q.passed !== false); // Assume passed if not explicitly false
 
         // XP Calculation
-        // 50 XP per challenge, 100 XP per interview, 20 XP per quiz
-        const totalXP = (completedChallenges.length * 50) + (interviewDocs.length * 100) + (passedQuizzes.length * 20);
+        // 50 XP per challenge, 100 XP per interview, 20 XP per quiz, 10 XP per lesson
+        const totalXP = (completedChallenges.length * 50) + (interviewDocs.length * 100) + (passedQuizzes.length * 20) + (lessonDocs.length * 10);
 
         // Streak Calculation
-        const allActivities = [...completedChallenges, ...interviewDocs, ...passedQuizzes];
+        const allActivities = [...completedChallenges, ...interviewDocs, ...passedQuizzes, ...lessonDocs];
         const uniqueDates = new Set(
             allActivities
                 .filter(a => a.date && !isNaN(a.date.getTime())) // Ensure valid date
@@ -86,6 +89,7 @@ export const getUserStats = async (userId) => {
             totalXP,
             challengesCompleted: completedChallenges.length,
             interviewsCompleted: interviewDocs.length,
+            lessonsCompleted: lessonDocs.length,
             recentActivity
         };
 
@@ -96,6 +100,7 @@ export const getUserStats = async (userId) => {
             totalXP: 0,
             challengesCompleted: 0,
             interviewsCompleted: 0,
+            lessonsCompleted: 0,
             recentActivity: []
         };
     }

@@ -10,7 +10,7 @@ import { ChevronLeft, ChevronRight, Code, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/useAuth';
-import { getUserEnrollment, updateUserEnrollment, getUserChallengeProgress } from '@/lib/firestore';
+import { getUserEnrollment, updateUserEnrollment, getUserChallengeProgress, recordLessonCompletion } from '@/lib/firestore';
 import { useEnrollment } from "@/contexts/EnrollmentContext";
 import QuizComponent from './components/QuizComponent';
 import CodeBlock from './components/CodeBlock';
@@ -98,6 +98,9 @@ export default function LessonPage() {
                 updatedCompletedLessons = [...updatedCompletedLessons, lessonId];
                 updates.completedLessons = updatedCompletedLessons;
                 updates.lastAccessed = new Date();
+
+                // Record lesson completion for streak/stats
+                await recordLessonCompletion(user.uid, trackId, lessonId, lesson.title);
             }
 
             // Mark module as completed if this is the last lesson

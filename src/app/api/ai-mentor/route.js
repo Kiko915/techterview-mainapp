@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
-import { getUserStats, updateChatSession } from "@/lib/firestore";
+import { getUserStats, updateChatSession, getAllTracksWithModules, getAllChallenges, getUserQuizResults } from "@/lib/firestore";
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -18,9 +18,26 @@ export async function POST(req) {
 
         // Fetch user stats for context
         let userStats = null;
+        let tracks = [];
+        let challenges = [];
+        let quizResults = [];
+
         if (userId) {
-            userStats = await getUserStats(userId);
+            [userStats, tracks, challenges, quizResults] = await Promise.all([
+                getUserStats(userId),
+                getAllTracksWithModules(),
+                getAllChallenges(),
+                getUserQuizResults(userId)
+            ]);
         }
+
+        // Format data for prompt
+        const tracksContext = tracks.map(t => {
+            const modulesStr = t.modules ? t.modules.map(m => `  - Module: ${m.title} (${m.description || 'No description'})`).join('\n') : '  - No modules';
+            return `- Track: ${t.title}\n  Description: ${t.description}\n  Modules:\n${modulesStr}`;
+        }).join('\n\n');
+        const challengesContext = challenges.map(c => `- ${c.title} (${c.difficulty})`).join('\n');
+        const quizContext = quizResults.map(q => `- Quiz ${q.quizId}: Score ${q.score}, Passed: ${q.passed}`).join('\n');
 
         // Construct System Prompt
         let systemPrompt = `You are an AI Mentor for a platform called "Techterview". 
@@ -35,6 +52,16 @@ export async function POST(req) {
     - Interviews Completed: ${userStats.interviewsCompleted}
     - Recent Activity: ${userStats.recentActivity.map(a => `${a.type} on ${a.date}`).join(", ")}
     ` : "User stats not available."}
+
+    Platform Content:
+    Available Learning Tracks:
+    ${tracksContext}
+
+    Available Coding Challenges:
+    ${challengesContext}
+
+    User Quiz Performance:
+    ${quizContext.length > 0 ? quizContext : "No quizzes taken yet."}
     
     ${context ? `Additional Context (Resume/CV/Portfolio): \n${context}` : ""}
     
@@ -42,6 +69,8 @@ export async function POST(req) {
     - Be encouraging, professional, and helpful.
     - If the user asks about their progress, refer to the stats provided.
     - If the user provides a resume or portfolio, analyze it for strengths, weaknesses, and improvements.
+    - Use the platform content to suggest next steps (e.g. "You should try the [Challenge Name] challenge").
+    - Do NOT give the direct solution to challenges, but provide hints and guidance.
     - Keep responses concise and actionable.
     `;
 

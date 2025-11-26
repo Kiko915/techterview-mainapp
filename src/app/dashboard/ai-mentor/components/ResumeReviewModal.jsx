@@ -24,6 +24,14 @@ const ResumeReviewModal = ({ open, onOpenChange, defaultTab = "paste", onContext
 
     const handleScrape = async () => {
         if (!url) return;
+
+        try {
+            new URL(url);
+        } catch (_) {
+            toast.error("Please enter a valid URL");
+            return;
+        }
+
         setIsUploading(true);
         try {
             const res = await fetch('/api/scrape', {

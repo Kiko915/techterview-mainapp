@@ -43,10 +43,12 @@ export default function ChallengeIDE() {
     const [submissionStatus, setSubmissionStatus] = useState("success"); // 'success' | 'error'
 
     // Helper to get storage key
-    const getStorageKey = (cId, lang) => `code-autosave-${cId}-${lang}`;
+    const getStorageKey = (uId, cId, lang) => `code-autosave-${uId}-${cId}-${lang}`;
 
     useEffect(() => {
         const fetchChallenge = async () => {
+            if (!user) return;
+
             try {
                 const docRef = doc(db, "challenges", challengeId);
                 const docSnap = await getDoc(docRef);
@@ -55,20 +57,28 @@ export default function ChallengeIDE() {
                     const data = docSnap.data();
                     setChallenge(data);
 
-                    // Set initial language and code
+                    // Set initial language
                     const defaultLang = data.languageRestriction?.[0] || "javascript";
                     setLanguage(defaultLang);
 
-                    // Check for saved code in localStorage
-                    const savedCode = localStorage.getItem(getStorageKey(challengeId, defaultLang));
-                    setCode(savedCode || data.starterCode?.[defaultLang] || "");
+                    // 1. Try to get code from Firestore (Source of Truth)
+                    const progress = await getUserChallengeProgress(user.uid, challengeId);
 
-                    // Check for saved progress (feedback)
-                    if (user) {
-                        const progress = await getUserChallengeProgress(user.uid, challengeId);
-                        if (progress?.feedback) {
-                            setAiFeedback(progress.feedback);
-                        }
+                    let initialCode = "";
+                    if (progress?.code) {
+                        initialCode = progress.code;
+                    } else {
+                        // 2. Fallback to LocalStorage (User-scoped)
+                        const savedCode = localStorage.getItem(getStorageKey(user.uid, challengeId, defaultLang));
+                        // 3. Fallback to Starter Code
+                        initialCode = savedCode || data.starterCode?.[defaultLang] || "";
+                    }
+
+                    setCode(initialCode);
+
+                    // Set feedback if exists
+                    if (progress?.feedback) {
+                        setAiFeedback(progress.feedback);
                     }
                 } else {
                     toast.error("Challenge not found", {
@@ -85,7 +95,7 @@ export default function ChallengeIDE() {
             }
         };
 
-        if (challengeId) {
+        if (challengeId && user) {
             fetchChallenge();
         }
     }, [challengeId, user]);
@@ -98,24 +108,28 @@ export default function ChallengeIDE() {
         setAiFeedback(null);
         setSubmissionStatus("success"); // Reset to default
 
-        // Check for saved code first, then fallback to starter code
-        const savedCode = localStorage.getItem(getStorageKey(challengeId, newLang));
+        if (!user) return;
+
+        // Check for saved code in localStorage (User-scoped)
+        const savedCode = localStorage.getItem(getStorageKey(user.uid, challengeId, newLang));
         setCode(savedCode || challenge.starterCode?.[newLang] || "");
     };
 
     const handleCodeChange = (newCode) => {
         setCode(newCode);
         setIsSaving(true);
-        localStorage.setItem(getStorageKey(challengeId, language), newCode);
+        if (user) {
+            localStorage.setItem(getStorageKey(user.uid, challengeId, language), newCode);
+        }
         // Simulate a brief delay to show the "Saving..." state, then revert to "Saved"
         setTimeout(() => setIsSaving(false), 800);
     };
 
     const handleReset = () => {
-        if (!challenge) return;
+        if (!challenge || !user) return;
         const starter = challenge.starterCode?.[language] || "";
         setCode(starter);
-        localStorage.removeItem(getStorageKey(challengeId, language));
+        localStorage.removeItem(getStorageKey(user.uid, challengeId, language));
         toast.info("Code reset to starter template");
     };
 

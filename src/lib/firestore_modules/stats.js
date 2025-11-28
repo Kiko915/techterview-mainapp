@@ -1,6 +1,6 @@
 import {
     collection,
-    getDocs,
+    getDocsFromServer,
     query,
     where
 } from 'firebase/firestore';
@@ -15,9 +15,9 @@ export const getUserStats = async (userId) => {
         const quizQuery = query(collection(db, 'quiz_results'), where('userId', '==', userId));
 
         const [challengeSnap, interviewSnap, quizSnap, lessonCompletions] = await Promise.all([
-            getDocs(challengeQuery),
-            getDocs(interviewQuery),
-            getDocs(quizQuery),
+            getDocsFromServer(challengeQuery),
+            getDocsFromServer(interviewQuery),
+            getDocsFromServer(quizQuery),
             getUserLessonCompletions(userId)
         ]);
 

@@ -1,7 +1,7 @@
 import {
     collection,
     addDoc,
-    getDocs,
+    getDocsFromServer,
     query,
     where,
     serverTimestamp,
@@ -38,7 +38,7 @@ export const getUserLessonCompletions = async (userId) => {
             where('userId', '==', userId),
             orderBy('completedAt', 'desc')
         );
-        const querySnapshot = await getDocs(q);
+        const querySnapshot = await getDocsFromServer(q);
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
         console.error('Error getting user lesson completions:', error);

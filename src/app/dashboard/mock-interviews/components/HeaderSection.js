@@ -1,8 +1,17 @@
+"use client";
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Play } from 'lucide-react';
 
 const HeaderSection = () => {
+    const handleStartSession = () => {
+        const practiceSection = document.getElementById('practice-section');
+        if (practiceSection) {
+            practiceSection.scrollIntoView({ behavior: 'smooth' });
+        }
+    };
+
     return (
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
             <div>
@@ -11,7 +20,7 @@ const HeaderSection = () => {
                     Master your communication skills with AI-powered practice.
                 </p>
             </div>
-            <Button size="lg" className="gap-2">
+            <Button size="lg" className="gap-2" onClick={handleStartSession}>
                 <Play className="w-4 h-4" />
                 Start New Session
             </Button>

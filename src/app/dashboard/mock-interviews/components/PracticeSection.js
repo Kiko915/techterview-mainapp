@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +12,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 const PracticeSection = () => {
+    const router = useRouter();
     const { user } = useAuth();
     const [recommendedModules, setRecommendedModules] = useState([]);
 
@@ -79,7 +81,7 @@ const PracticeSection = () => {
         }
     ];
     return (
-        <div className="mb-8">
+        <div id="practice-section" className="mb-8">
             <h2 className="text-2xl font-bold tracking-tight mb-4 font-playfair">Choose a Module</h2>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {modules.map((module, index) => (
@@ -103,7 +105,19 @@ const PracticeSection = () => {
                             </CardDescription>
                         </CardContent>
                         <CardFooter>
-                            <Button className="w-full">Start Interview</Button>
+                            <Button
+                                className="w-full"
+                                onClick={() => {
+                                    const context = {
+                                        targetRole: module.title,
+                                        resumeName: null // Will be uploaded in lobby
+                                    };
+                                    localStorage.setItem('interviewContext', JSON.stringify(context));
+                                    router.push('/dashboard/interview-lobby');
+                                }}
+                            >
+                                Start Interview
+                            </Button>
                         </CardFooter>
                     </Card>
                 ))}

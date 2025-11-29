@@ -405,7 +405,7 @@ export function useInterview(roomId) {
         } catch (error) {
             console.error("Error ending interview:", error);
         }
-        router.push('/dashboard/feedback');
+        router.push(`/dashboard/interview/${roomId}/feedback`);
     };
 
     return {

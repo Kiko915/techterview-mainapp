@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/useAuth';
 import { getInterview } from '@/lib/firestore_modules/interviews';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, CheckCircle2, AlertCircle, TrendingUp, ArrowLeft } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle, TrendingUp, ArrowLeft, Sparkles } from 'lucide-react';
 import { toast } from "sonner";
 import { RadialBarChart, RadialBar, PolarAngleAxis, ResponsiveContainer } from 'recharts';
 
@@ -85,19 +85,53 @@ export default function InterviewFeedbackPage({ params }) {
         }
     };
 
+    const [loadingStep, setLoadingStep] = useState(0);
+    const loadingSteps = [
+        "Analyzing interview transcript...",
+        "Identifying key strengths...",
+        "Pinpointing areas for improvement...",
+        "Calculating overall score...",
+        "Finalizing personalized feedback..."
+    ];
+
+    useEffect(() => {
+        if (loading || generating) {
+            const interval = setInterval(() => {
+                setLoadingStep((prev) => (prev + 1) % loadingSteps.length);
+            }, 3000); // Change step every 3 seconds
+            return () => clearInterval(interval);
+        }
+    }, [loading, generating]);
+
     if (loading || generating) {
         return (
-            <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-                <div className="text-center space-y-4 max-w-md">
-                    <div className="relative w-24 h-24 mx-auto">
+            <div className="min-h-screen flex flex-col items-center justify-center p-4">
+                <div className="text-center space-y-8 max-w-md w-full">
+                    <div className="relative w-32 h-32 mx-auto">
+                        {/* Outer Ring */}
                         <div className="absolute inset-0 border-4 border-slate-200 rounded-full"></div>
+                        {/* Spinning Ring */}
                         <div className="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
-                        <Loader2 className="w-10 h-10 text-blue-600 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                        {/* Inner Pulse */}
+                        <div className="absolute inset-4 bg-blue-50 rounded-full animate-pulse flex items-center justify-center">
+                            <Sparkles className="w-12 h-12 text-blue-600 animate-bounce" />
+                        </div>
                     </div>
-                    <h2 className="text-2xl font-bold text-slate-900">Analyzing Your Interview</h2>
-                    <p className="text-slate-500">
-                        Our AI is reviewing your transcript, analyzing your responses, and generating personalized feedback. This may take a moment...
-                    </p>
+
+                    <div className="space-y-4">
+                        <h2 className="text-2xl font-bold text-slate-900 font-playfair animate-fade-in">
+                            {loadingSteps[loadingStep]}
+                        </h2>
+                        <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-blue-600 transition-all duration-500 ease-out"
+                                style={{ width: `${((loadingStep + 1) / loadingSteps.length) * 100}%` }}
+                            />
+                        </div>
+                        <p className="text-slate-500 text-sm">
+                            Our AI is reviewing your responses to provide detailed insights.
+                        </p>
+                    </div>
                 </div>
             </div>
         );

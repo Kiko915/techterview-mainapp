@@ -108,6 +108,11 @@ const PracticeSection = () => {
                             <Button
                                 className="w-full"
                                 onClick={() => {
+                                    if (module.title === "Customize Interview") {
+                                        router.push('/dashboard/interview/customize');
+                                        return;
+                                    }
+
                                     const context = {
                                         targetRole: module.title,
                                         resumeName: null // Will be uploaded in lobby

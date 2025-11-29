@@ -1,6 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
-import { MessageSquare, ChevronRight, User, Bot } from 'lucide-react';
+import { MessageSquare, ChevronRight, User } from 'lucide-react';
+import { useAuth } from '@/lib/useAuth';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function TranscriptPanel({
     isTranscriptOpen,
@@ -8,6 +10,7 @@ export default function TranscriptPanel({
     transcript
 }) {
     const scrollRef = useRef(null);
+    const { user } = useAuth();
 
     // Auto-scroll to bottom of transcript
     useEffect(() => {
@@ -40,9 +43,23 @@ export default function TranscriptPanel({
                 <div className="space-y-4">
                     {transcript.map((msg, idx) => (
                         <div key={idx} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm ${msg.role === 'user' ? 'bg-indigo-100 text-indigo-600' : 'bg-blue-100 text-blue-600'
-                                }`}>
-                                {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                            <div className="shrink-0">
+                                {msg.role === 'user' ? (
+                                    <Avatar className="w-8 h-8 border border-indigo-200 shadow-sm">
+                                        <AvatarImage src={user?.photoURL} alt="User" />
+                                        <AvatarFallback className="bg-indigo-100 text-indigo-600">
+                                            <User className="w-4 h-4" />
+                                        </AvatarFallback>
+                                    </Avatar>
+                                ) : (
+                                    <div className="w-8 h-8 rounded-full overflow-hidden border border-blue-200 shadow-sm bg-blue-50">
+                                        <img
+                                            src="/assets/techbot/techbot-pfp.png"
+                                            alt="TechBot"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                )}
                             </div>
                             <div className={`flex-1 p-3 rounded-2xl text-sm shadow-sm border ${msg.role === 'user'
                                 ? 'bg-indigo-600 text-white rounded-tr-none border-indigo-600'

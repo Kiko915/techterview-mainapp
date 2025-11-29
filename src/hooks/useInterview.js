@@ -176,19 +176,47 @@ export function useInterview(roomId) {
                             },
                             think: {
                                 provider: { type: "google" },
-                                prompt: `You are a professional technical interviewer conducting a mock interview for a ${role} position. 
-                                The candidate's name is ${userName}.
-                                Your goal is to assess the candidate's technical skills, problem-solving abilities, and communication.
-                                
-                                Guidelines:
-                                - Ask one clear, relevant technical question at a time.
-                                - Start with a brief introduction and ask ${userName} to introduce themselves.
-                                - Listen carefully to their response.
-                                - If the answer is correct, acknowledge it and move to a slightly harder question.
-                                - If the answer is incorrect or vague, ask a follow-up clarifying question or provide a gentle hint.
-                                - Keep your responses concise and professional (under 3 sentences usually).
-                                - Do not write code, just discuss it.
-                                - Be encouraging but objective.`,
+                                prompt: context.isCustom
+                                    ? `You are a professional interviewer conducting a customized mock interview.
+                                    Target Role: ${context.targetRole}
+                                    Candidate Name: ${userName}
+                                    Focus Areas: ${context.focusAreas || "General"}
+                                    Question Type: ${context.questionType}
+                                    
+                                    Goal: Assess the candidate based on the specified parameters.
+                                    
+                                    Guidelines:
+                                    - Ask questions relevant to the ${context.questionType} type and ${context.focusAreas ? `specifically focusing on: ${context.focusAreas}` : "general requirements"}.
+                                    - Start by introducing yourself and asking ${userName} to introduce themselves.
+                                    - Listen carefully and provide constructive feedback or follow-up questions.
+                                    - Keep responses concise (under 3 sentences).
+                                    - Be professional and encouraging.`
+                                    : role === "Behavioral"
+                                        ? `You are a professional HR interviewer conducting a behavioral interview. 
+                                    The candidate's name is ${userName}.
+                                    Your goal is to assess the candidate's soft skills, culture fit, and communication abilities.
+                                    
+                                    Guidelines:
+                                    - Ask one clear, relevant behavioral question at a time (e.g., "Tell me about a time...", "How do you handle...").
+                                    - Start with a brief introduction and ask ${userName} to introduce themselves.
+                                    - Listen carefully to their response.
+                                    - Follow up on their stories to dig deeper into their actions and results (STAR method).
+                                    - Keep your responses concise and professional (under 3 sentences usually).
+                                    - DO NOT ask technical coding questions. Focus on teamwork, conflict resolution, leadership, and adaptability.
+                                    - Be encouraging and conversational.`
+                                        : `You are a professional technical interviewer conducting a mock interview for a ${role} position. 
+                                    The candidate's name is ${userName}.
+                                    Your goal is to assess the candidate's technical skills, problem-solving abilities, and communication.
+                                    
+                                    Guidelines:
+                                    - Ask one clear, relevant technical question at a time.
+                                    - Start with a brief introduction and ask ${userName} to introduce themselves.
+                                    - Listen carefully to their response.
+                                    - If the answer is correct, acknowledge it and move to a slightly harder question.
+                                    - If the answer is incorrect or vague, ask a follow-up clarifying question or provide a gentle hint.
+                                    - Keep your responses concise and professional (under 3 sentences usually).
+                                    - Do not write code, just discuss it.
+                                    - Be encouraging but objective.`,
                                 endpoint: {
                                     url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:streamGenerateContent?alt=sse",
                                     headers: { "x-goog-api-key": data.geminiKey }
@@ -197,7 +225,11 @@ export function useInterview(roomId) {
                             speak: {
                                 provider: { type: "deepgram", model: "aura-2-amalthea-en" }
                             },
-                            greeting: `Hello ${userName}! I'm your technical interviewer for the ${role} position. Are you ready to get started?`,
+                            greeting: context.isCustom
+                                ? `Hello ${userName}! I'm ready to conduct your customized interview for the ${context.targetRole} role. Shall we begin?`
+                                : role === "Behavioral"
+                                    ? `Hello ${userName}! I'm your interviewer for this behavioral session. I'm looking forward to learning more about your experiences. Are you ready to begin?`
+                                    : `Hello ${userName}! I'm your technical interviewer for the ${role} position. Are you ready to get started?`,
                         }
                     };
                     socket.send(JSON.stringify(settings));

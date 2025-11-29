@@ -1,42 +1,71 @@
-import React from 'react';
+"use client";
+
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye } from 'lucide-react';
+import { Eye, Loader2 } from 'lucide-react';
+import { useAuth } from '@/lib/useAuth';
+import { getUserInterviews } from '@/lib/firestore_modules/interviews';
 
 const HistorySection = () => {
-    const history = [
-        {
-            date: "Nov 24, 2025",
-            topic: "Behavioral",
-            duration: "15m 30s",
-            score: 85,
-        },
-        {
-            date: "Nov 22, 2025",
-            topic: "Technical - Frontend",
-            duration: "20m 10s",
-            score: 72,
-        },
-        {
-            date: "Nov 20, 2025",
-            topic: "Technical - Backend",
-            duration: "18m 45s",
-            score: 92,
-        },
-        {
-            date: "Nov 18, 2025",
-            topic: "Behavioral",
-            duration: "12m 00s",
-            score: 45,
-        }
-    ];
+    const { user } = useAuth();
+    const router = useRouter();
+    const [interviews, setInterviews] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchHistory = async () => {
+            if (!user) return;
+            try {
+                const data = await getUserInterviews(user.uid);
+                setInterviews(data);
+            } catch (error) {
+                console.error("Error fetching history:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchHistory();
+    }, [user]);
 
     const getScoreColor = (score) => {
+        if (!score) return "bg-slate-500";
         if (score >= 80) return "bg-green-500 hover:bg-green-600";
         if (score >= 50) return "bg-yellow-500 hover:bg-yellow-600";
         return "bg-red-500 hover:bg-red-600";
     };
+
+    const formatDuration = (seconds) => {
+        if (!seconds) return "N/A";
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}m ${secs}s`;
+    };
+
+    const formatDate = (timestamp) => {
+        if (!timestamp) return "N/A";
+        return new Date(timestamp.seconds * 1000).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+    };
+
+    if (loading) {
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle className="font-playfair">Recent Sessions</CardTitle>
+                </CardHeader>
+                <CardContent className="flex justify-center py-8">
+                    <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                </CardContent>
+            </Card>
+        );
+    }
 
     return (
         <Card>
@@ -56,24 +85,37 @@ const HistorySection = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y">
-                            {history.map((session, index) => (
-                                <tr key={index} className="group hover:bg-muted/50 transition-colors">
-                                    <td className="py-3">{session.date}</td>
-                                    <td className="py-3 font-medium">{session.topic}</td>
-                                    <td className="py-3 text-muted-foreground">{session.duration}</td>
-                                    <td className="py-3">
-                                        <Badge className={`${getScoreColor(session.score)} text-white border-0`}>
-                                            {session.score}%
-                                        </Badge>
-                                    </td>
-                                    <td className="py-3 text-right">
-                                        <Button variant="ghost" size="sm" className="gap-2">
-                                            <Eye className="w-4 h-4" />
-                                            View Feedback
-                                        </Button>
+                            {interviews.length === 0 ? (
+                                <tr>
+                                    <td colSpan="5" className="py-8 text-center text-muted-foreground">
+                                        No interview sessions found. Start practicing!
                                     </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                interviews.map((session) => (
+                                    <tr key={session.id} className="group hover:bg-muted/50 transition-colors">
+                                        <td className="py-3">{formatDate(session.createdAt)}</td>
+                                        <td className="py-3 font-medium">{session.targetRole || "General"}</td>
+                                        <td className="py-3 text-muted-foreground">{formatDuration(session.duration)}</td>
+                                        <td className="py-3">
+                                            <Badge className={`${getScoreColor(session.feedback?.score)} text-white border-0`}>
+                                                {session.feedback?.score ? `${session.feedback.score}%` : 'N/A'}
+                                            </Badge>
+                                        </td>
+                                        <td className="py-3 text-right">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="gap-2"
+                                                onClick={() => router.push(`/dashboard/interview/${session.id}/feedback`)}
+                                            >
+                                                <Eye className="w-4 h-4" />
+                                                View Feedback
+                                            </Button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>

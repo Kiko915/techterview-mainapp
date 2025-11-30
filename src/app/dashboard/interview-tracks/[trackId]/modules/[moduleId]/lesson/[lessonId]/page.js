@@ -15,6 +15,7 @@ import { useEnrollment } from "@/contexts/EnrollmentContext";
 import QuizComponent from './components/QuizComponent';
 import CodeBlock from './components/CodeBlock';
 import { getLessonById, getTrackById, getTrackModules } from '@/lib/firestore_modules/tracks';
+import TrackCompletionModal from '@/components/TrackCompletionModal';
 
 export default function LessonPage() {
     const params = useParams();
@@ -30,6 +31,7 @@ export default function LessonPage() {
     const [challengeProgress, setChallengeProgress] = useState(null);
     const [loading, setLoading] = useState(true);
     const [lessonInterviews, setLessonInterviews] = useState([]);
+    const [showCompletionModal, setShowCompletionModal] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -141,6 +143,23 @@ export default function LessonPage() {
                         updateEnrollment(trackId, true, newEnrollmentData);
                     }
                     return; // Stop here, do not mark track as complete
+                } else {
+                    // ALL LESSONS COMPLETE - Show Modal
+
+                    // Save final progress first
+                    if (Object.keys(updates).length > 0) {
+                        await updateUserEnrollment(enrollment.id, updates);
+
+                        const newEnrollmentData = {
+                            ...enrollment,
+                            ...updates
+                        };
+                        setEnrollment(newEnrollmentData);
+                        updateEnrollment(trackId, true, newEnrollmentData);
+                    }
+
+                    setShowCompletionModal(true);
+                    return;
                 }
             }
 
@@ -170,7 +189,9 @@ export default function LessonPage() {
             if (nextLesson) {
                 router.push(`/dashboard/interview-tracks/${trackId}/modules/${nextLesson.moduleId}/lesson/${nextLesson.id}`);
             } else {
-                toast.success("Track Completed!");
+                // This case should be handled by the track completion check above, 
+                // but as a fallback if nextLesson is null but missingLessons > 0 (which is handled above)
+                // or if logic falls through.
                 router.push(`/dashboard/interview-tracks/${trackId}`);
             }
 
@@ -357,7 +378,7 @@ export default function LessonPage() {
                             </div>
                         )}
 
-                        {enrollment?.completedLessons?.includes(lesson.id) ? (
+                        {enrollment?.completedLessons?.includes(lesson.id) || bestScore >= 50 ? (
                             <div className="flex flex-col items-center gap-4">
                                 <div className="flex items-center gap-2 text-green-600 bg-green-100 px-4 py-2 rounded-full font-medium">
                                     <CheckCircle2 className="w-5 h-5" />
@@ -456,7 +477,7 @@ export default function LessonPage() {
                     <Button
                         onClick={() => handleCompleteLesson(next)}
                         className="gap-2 h-auto py-4 px-6 bg-[#354fd2] hover:bg-[#2a3fca] text-white"
-                        disabled={lesson.type === 'interview' && !enrollment?.completedLessons?.includes(lesson.id)}
+                        disabled={lesson.type === 'interview' && !enrollment?.completedLessons?.includes(lesson.id) && bestScore < 50}
                     >
                         <div className="text-right">
                             <div className="text-xs text-white/80 mb-1">Next Lesson</div>
@@ -469,17 +490,17 @@ export default function LessonPage() {
                         onClick={() => handleCompleteLesson(null)}
                         disabled={
                             (lesson.challengeId && challengeProgress?.status !== 'completed') ||
-                            (lesson.type === 'interview' && !enrollment?.completedLessons?.includes(lesson.id))
+                            (lesson.type === 'interview' && !enrollment?.completedLessons?.includes(lesson.id) && bestScore < 50)
                         }
                         className={`gap-2 h-auto py-4 px-6 text-white ${(lesson.challengeId && challengeProgress?.status !== 'completed') ||
-                            (lesson.type === 'interview' && !enrollment?.completedLessons?.includes(lesson.id))
+                            (lesson.type === 'interview' && !enrollment?.completedLessons?.includes(lesson.id) && bestScore < 50)
                             ? "bg-gray-400 cursor-not-allowed"
                             : "bg-green-600 hover:bg-green-700"
                             }`}
                     >
                         {lesson.challengeId && challengeProgress?.status !== 'completed' ? (
                             <span>Complete Challenge First</span>
-                        ) : lesson.type === 'interview' && !enrollment?.completedLessons?.includes(lesson.id) ? (
+                        ) : lesson.type === 'interview' && !enrollment?.completedLessons?.includes(lesson.id) && bestScore < 50 ? (
                             <span>Pass Interview First</span>
                         ) : (
                             <span>Complete Track</span>
@@ -488,6 +509,17 @@ export default function LessonPage() {
                     </Button>
                 )}
             </div>
+
+            <TrackCompletionModal
+                isOpen={showCompletionModal}
+                onClose={() => {
+                    setShowCompletionModal(false);
+                    router.push(`/dashboard/interview-tracks/${trackId}`);
+                }}
+                userName={user?.displayName || "Student"}
+                trackName={track?.title || "Interview Track"}
+                trackId={trackId}
+            />
         </div>
     );
 }

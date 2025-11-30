@@ -4,6 +4,8 @@ import "sonner/dist/styles.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { Toaster } from "@/components/ui/sonner";
 
+import ScreenSizeGuard from "@/components/ScreenSizeGuard";
+
 const playfairDisplay = Playfair_Display({
   variable: "--font-playfair-display",
   subsets: ["latin"],
@@ -28,7 +30,9 @@ export default function RootLayout({ children }) {
         className={`${playfairDisplay.variable} ${montserrat.variable} antialiased`} suppressHydrationWarning
       >
         <ThemeProvider>
-          {children}
+          <ScreenSizeGuard>
+            {children}
+          </ScreenSizeGuard>
           <Toaster />
         </ThemeProvider>
       </body>

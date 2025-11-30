@@ -14,6 +14,8 @@ const HistorySection = () => {
     const router = useRouter();
     const [interviews, setInterviews] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 10;
 
     useEffect(() => {
         const fetchHistory = async () => {
@@ -67,6 +69,20 @@ const HistorySection = () => {
         );
     }
 
+
+
+    const totalPages = Math.ceil(interviews.length / ITEMS_PER_PAGE);
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const currentInterviews = interviews.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+    const handlePrevious = () => {
+        setCurrentPage((prev) => Math.max(prev - 1, 1));
+    };
+
+    const handleNext = () => {
+        setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+    };
+
     return (
         <Card>
             <CardHeader>
@@ -92,7 +108,7 @@ const HistorySection = () => {
                                     </td>
                                 </tr>
                             ) : (
-                                interviews.map((session) => (
+                                currentInterviews.map((session) => (
                                     <tr key={session.id} className="group hover:bg-muted/50 transition-colors">
                                         <td className="py-3">{formatDate(session.createdAt)}</td>
                                         <td className="py-3 font-medium">{session.targetRole || "General"}</td>
@@ -119,6 +135,31 @@ const HistorySection = () => {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination Controls */}
+                {interviews.length > ITEMS_PER_PAGE && (
+                    <div className="flex items-center justify-end space-x-2 py-4">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handlePrevious}
+                            disabled={currentPage === 1}
+                        >
+                            Previous
+                        </Button>
+                        <div className="text-sm text-muted-foreground">
+                            Page {currentPage} of {totalPages}
+                        </div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleNext}
+                            disabled={currentPage === totalPages}
+                        >
+                            Next
+                        </Button>
+                    </div>
+                )}
             </CardContent>
         </Card>
     );

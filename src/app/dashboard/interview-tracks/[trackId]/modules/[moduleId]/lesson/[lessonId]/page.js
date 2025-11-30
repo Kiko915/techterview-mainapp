@@ -352,7 +352,7 @@ export default function LessonPage() {
                                 <img
                                     src="/assets/techbot/techbot-pfp.png"
                                     alt="TechBot"
-                                    className="w-24 h-24 object-contain"
+                                    className="w-24 h-24 object-contain rounded-full"
                                 />
                             </div>
                         </div>

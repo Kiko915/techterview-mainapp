@@ -94,8 +94,30 @@ const tracksData = [
                         { id: 'fe-challenge-palindrome', title: "Challenge: Valid Palindrome", duration: "30 min", type: "article", challengeId: "js-valid-palindrome" },
                         { id: 'fe-challenge-flatten', title: "Challenge: Deep Flatten", duration: "45 min", type: "article", challengeId: "js-deep-flatten" },
                         { id: 'fe-challenge-emitter', title: "Challenge: Event Emitter", duration: "60 min", type: "article", challengeId: "js-event-emitter" },
-                        { id: 'fe-system-design', title: "Frontend System Design", duration: "90 min", type: "article", challengeId: null },
-                        { id: 'fe-behavioral', title: "Behavioral Questions for Frontend", duration: "45 min", type: "article", challengeId: null }
+                        {
+                            id: 'fe-system-design',
+                            title: "Frontend System Design",
+                            duration: "90 min",
+                            type: "interview",
+                            challengeId: null,
+                            interviewConfig: {
+                                targetRole: "Frontend Developer",
+                                questionType: "System Design",
+                                focusAreas: "Component Architecture, State Management, Performance"
+                            }
+                        },
+                        {
+                            id: 'fe-behavioral',
+                            title: "Behavioral Questions for Frontend",
+                            duration: "45 min",
+                            type: "interview",
+                            challengeId: null,
+                            interviewConfig: {
+                                targetRole: "Frontend Developer",
+                                questionType: "Behavioral",
+                                focusAreas: "Teamwork, Conflict Resolution, Project Management"
+                            }
+                        }
                     ]
                 }
             },
@@ -186,8 +208,30 @@ const tracksData = [
                         { id: 'be-challenge-parentheses', title: "Challenge: Valid Parentheses", duration: "30 min", type: "article", challengeId: "py-valid-parentheses" },
                         { id: 'be-challenge-anagrams', title: "Challenge: Group Anagrams", duration: "45 min", type: "article", challengeId: "py-group-anagrams" },
                         { id: 'be-challenge-lru', title: "Challenge: LRU Cache", duration: "60 min", type: "article", challengeId: "py-lru-cache" },
-                        { id: 'be-system-design', title: "System Design Interview Practice", duration: "120 min", type: "article", challengeId: null },
-                        { id: 'be-mock-interview', title: "Mock Backend Interview", duration: "60 min", type: "article", challengeId: null }
+                        {
+                            id: 'be-system-design',
+                            title: "System Design Interview Practice",
+                            duration: "120 min",
+                            type: "interview",
+                            challengeId: null,
+                            interviewConfig: {
+                                targetRole: "Backend Developer",
+                                questionType: "System Design",
+                                focusAreas: "Scalability, Database Design, Microservices"
+                            }
+                        },
+                        {
+                            id: 'be-mock-interview',
+                            title: "Mock Backend Interview",
+                            duration: "60 min",
+                            type: "interview",
+                            challengeId: null,
+                            interviewConfig: {
+                                targetRole: "Backend Developer",
+                                questionType: "Technical",
+                                focusAreas: "API Design, Database Schema, System Architecture"
+                            }
+                        }
                     ]
                 }
             },
@@ -276,9 +320,31 @@ const tracksData = [
                     order: 4,
                     lessons: [
                         { id: 'portfolio-review', title: "Portfolio Review Preparation", duration: "90 min", type: "article", challengeId: null },
-                        { id: 'whiteboard-challenge', title: "Whiteboard Design Challenge", duration: "60 min", type: "article", challengeId: "uiux-challenge-1" },
+                        {
+                            id: 'whiteboard-challenge',
+                            title: "Whiteboard Design Challenge",
+                            duration: "60 min",
+                            type: "interview",
+                            challengeId: null,
+                            interviewConfig: {
+                                targetRole: "UI/UX Designer",
+                                questionType: "Whiteboard Challenge",
+                                focusAreas: "Problem Solving, User Flow, Wireframing"
+                            }
+                        },
                         { id: 'design-decisions', title: "Articulating Design Decisions", duration: "60 min", type: "article", challengeId: null },
-                        { id: 'uiux-behavioral', title: "Behavioral Questions for Designers", duration: "45 min", type: "article", challengeId: null }
+                        {
+                            id: 'uiux-behavioral',
+                            title: "Behavioral Questions for Designers",
+                            duration: "45 min",
+                            type: "interview",
+                            challengeId: null,
+                            interviewConfig: {
+                                targetRole: "UI/UX Designer",
+                                questionType: "Behavioral",
+                                focusAreas: "Design Process, Stakeholder Management, User Empathy"
+                            }
+                        }
                     ]
                 }
             },

@@ -68,6 +68,22 @@ export const getUserInterviews = async (userId) => {
     }
 };
 
+export const getInterviewsForLesson = async (userId, lessonId) => {
+    try {
+        const q = query(
+            interviewsCollection,
+            where('userId', '==', userId),
+            where('lessonId', '==', lessonId),
+            orderBy('createdAt', 'desc')
+        );
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error('Error getting lesson interviews:', error);
+        return [];
+    }
+};
+
 export const updateInterview = async (interviewId, updates) => {
     try {
         const docRef = doc(db, 'interviews', interviewId);

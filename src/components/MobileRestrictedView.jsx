@@ -3,7 +3,7 @@ import Image from "next/image";
 export default function MobileRestrictedView() {
     return (
         <div className="relative flex min-h-screen flex-col items-center bg-[#FEFEFE] justify-center p-6 text-center">
-            <div className="absolute left-6 top-6 h-12 w-12 mx-auto">
+            <div className="absolute left-6 top-6 h-12 w-12">
                 <Image
                     src="/logo/techterview_symbol_colored.png"
                     alt="TechTerview Logo"

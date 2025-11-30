@@ -20,6 +20,7 @@ export function useInterview(roomId) {
         { role: 'agent', text: "Hello! I'm your technical interviewer. Are you ready to get started?" },
     ]);
     const [isValidSession, setIsValidSession] = useState(false);
+    const [interviewData, setInterviewData] = useState(null);
 
     const videoRef = useRef(null);
     const socketRef = useRef(null);
@@ -69,6 +70,7 @@ export function useInterview(roomId) {
                     return;
                 }
 
+                setInterviewData(interview);
                 setIsValidSession(true);
                 startTimeRef.current = Date.now(); // Start tracking time
             } catch (error) {
@@ -116,16 +118,17 @@ export function useInterview(roomId) {
 
     // Initialize Media and Voice Agent
     useEffect(() => {
-        if (!isClient || authLoading || !isValidSession) return;
+        if (!isClient || authLoading || !isValidSession || !interviewData) return;
 
         const init = async () => {
             try {
                 // 1. Get User Media
-                const context = JSON.parse(localStorage.getItem('interviewContext') || '{}');
+                // Try to get context from localStorage for device selection, but fallback to defaults
+                const localContext = JSON.parse(localStorage.getItem('interviewContext') || '{}');
                 const constraints = {
-                    video: context.selectedVideoId ? { deviceId: { exact: context.selectedVideoId } } : true,
+                    video: localContext.selectedVideoId ? { deviceId: { exact: localContext.selectedVideoId } } : true,
                     audio: {
-                        deviceId: context.selectedAudioId ? { exact: context.selectedAudioId } : undefined,
+                        deviceId: localContext.selectedAudioId ? { exact: localContext.selectedAudioId } : undefined,
                         sampleRate: 16000,
                         channelCount: 1,
                         echoCancellation: true,
@@ -159,10 +162,12 @@ export function useInterview(roomId) {
                     setConnectionStatus("Connected");
                     setAgentStatus("Listening");
 
-                    // Send Configuration
-                    const context = JSON.parse(localStorage.getItem('interviewContext') || '{}');
-                    const role = context.targetRole || "Software Engineer";
+                    // Send Configuration using interviewData from Firestore
+                    const role = interviewData.targetRole || "Software Engineer";
                     const userName = user?.displayName || "Candidate";
+                    const questionType = interviewData.questionType || "Technical";
+                    const focusAreas = interviewData.focusAreas || "";
+                    const isBehavioral = questionType === "Behavioral" || role === "Behavioral";
 
                     const settings = {
                         type: "Settings",
@@ -176,23 +181,8 @@ export function useInterview(roomId) {
                             },
                             think: {
                                 provider: { type: "google" },
-                                prompt: context.isCustom
-                                    ? `You are a professional interviewer conducting a customized mock interview.
-                                    Target Role: ${context.targetRole}
-                                    Candidate Name: ${userName}
-                                    Focus Areas: ${context.focusAreas || "General"}
-                                    Question Type: ${context.questionType}
-                                    
-                                    Goal: Assess the candidate based on the specified parameters.
-                                    
-                                    Guidelines:
-                                    - Ask questions relevant to the ${context.questionType} type and ${context.focusAreas ? `specifically focusing on: ${context.focusAreas}` : "general requirements"}.
-                                    - Start by introducing yourself and asking ${userName} to introduce themselves.
-                                    - Listen carefully and provide constructive feedback or follow-up questions.
-                                    - Keep responses concise (under 3 sentences).
-                                    - Be professional and encouraging.`
-                                    : role === "Behavioral"
-                                        ? `You are a professional HR interviewer conducting a behavioral interview. 
+                                prompt: isBehavioral
+                                    ? `You are a professional HR interviewer conducting a behavioral interview. 
                                     The candidate's name is ${userName}.
                                     Your goal is to assess the candidate's soft skills, culture fit, and communication abilities.
                                     
@@ -204,9 +194,11 @@ export function useInterview(roomId) {
                                     - Keep your responses concise and professional (under 3 sentences usually).
                                     - DO NOT ask technical coding questions. Focus on teamwork, conflict resolution, leadership, and adaptability.
                                     - Be encouraging and conversational.`
-                                        : `You are a professional technical interviewer conducting a mock interview for a ${role} position. 
+                                    : `You are a professional technical interviewer conducting a mock interview for a ${role} position. 
                                     The candidate's name is ${userName}.
                                     Your goal is to assess the candidate's technical skills, problem-solving abilities, and communication.
+                                    ${focusAreas ? `Focus Areas: ${focusAreas}` : ""}
+                                    ${questionType === "System Design" ? "This is a System Design interview. Focus on high-level architecture, scalability, and trade-offs." : ""}
                                     
                                     Guidelines:
                                     - Ask one clear, relevant technical question at a time.
@@ -225,11 +217,9 @@ export function useInterview(roomId) {
                             speak: {
                                 provider: { type: "deepgram", model: "aura-2-amalthea-en" }
                             },
-                            greeting: context.isCustom
-                                ? `Hello ${userName}! I'm ready to conduct your customized interview for the ${context.targetRole} role. Shall we begin?`
-                                : role === "Behavioral"
-                                    ? `Hello ${userName}! I'm your interviewer for this behavioral session. I'm looking forward to learning more about your experiences. Are you ready to begin?`
-                                    : `Hello ${userName}! I'm your technical interviewer for the ${role} position. Are you ready to get started?`,
+                            greeting: isBehavioral
+                                ? `Hello ${userName}! I'm your interviewer for this behavioral session. I'm looking forward to learning more about your experiences. Are you ready to begin?`
+                                : `Hello ${userName}! I'm your technical interviewer for the ${role} position. Are you ready to get started?`,
                         }
                     };
                     socket.send(JSON.stringify(settings));
@@ -270,7 +260,7 @@ export function useInterview(roomId) {
         return () => {
             cleanup();
         };
-    }, [isClient, authLoading, user, isValidSession]);
+    }, [isClient, authLoading, user, isValidSession, interviewData]);
 
     const startAudioStreaming = (mediaStream, socket) => {
         recorderContextRef.current = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });

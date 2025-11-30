@@ -1,19 +1,20 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { getLessonById, getTrackModules, getTrackById } from '../../../../../utils';
-import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Code, CheckCircle2 } from 'lucide-react';
-import Link from 'next/link';
+import { Button } from "@/components/ui/button";
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/useAuth';
 import { getUserEnrollment, updateUserEnrollment, getUserChallengeProgress, recordLessonCompletion } from '@/lib/firestore';
+import { createInterview, getInterviewsForLesson } from '@/lib/firestore_modules/interviews';
 import { useEnrollment } from "@/contexts/EnrollmentContext";
 import QuizComponent from './components/QuizComponent';
 import CodeBlock from './components/CodeBlock';
+import { getLessonById, getTrackById, getTrackModules } from '@/lib/firestore_modules/tracks';
 
 export default function LessonPage() {
     const params = useParams();
@@ -28,6 +29,7 @@ export default function LessonPage() {
     const [enrollment, setEnrollment] = useState(null);
     const [challengeProgress, setChallengeProgress] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [lessonInterviews, setLessonInterviews] = useState([]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -60,6 +62,12 @@ export default function LessonPage() {
                     if (lessonData.challengeId) {
                         const progress = await getUserChallengeProgress(user.uid, lessonData.challengeId);
                         setChallengeProgress(progress);
+                    }
+
+                    // Fetch interviews if this is an interview lesson
+                    if (lessonData.type === 'interview') {
+                        const interviews = await getInterviewsForLesson(user.uid, lessonId);
+                        setLessonInterviews(interviews);
                     }
                 }
 
@@ -237,6 +245,38 @@ export default function LessonPage() {
 
     const { prev, next } = getNavigation();
 
+    const handleStartInterview = async () => {
+        if (!user) return;
+
+        try {
+            setLoading(true);
+            const interviewData = {
+                userId: user.uid,
+                trackId: trackId,
+                moduleId: moduleId,
+                lessonId: lessonId,
+                targetRole: lesson.interviewConfig?.targetRole || "Software Engineer",
+                questionType: lesson.interviewConfig?.questionType || "Technical",
+                focusAreas: lesson.interviewConfig?.focusAreas || "",
+                status: 'active',
+                type: 'track_interview' // Mark this as a track interview
+            };
+
+            const interviewId = await createInterview(interviewData);
+            router.push(`/interview-room/${interviewId}`);
+        } catch (error) {
+            console.error("Error starting interview:", error);
+            toast.error("Failed to start interview");
+            setLoading(false);
+        }
+    };
+
+    // Calculate best score
+    const bestScore = lessonInterviews.reduce((max, interview) => {
+        const score = interview.feedback?.score || 0;
+        return score > max ? score : max;
+    }, 0);
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
@@ -275,8 +315,6 @@ export default function LessonPage() {
                 )}
             </div>
 
-
-
             {/* Content Area */}
             <div className="mb-16">
                 {lesson.type === 'quiz' ? (
@@ -285,6 +323,71 @@ export default function LessonPage() {
                         onComplete={() => handleCompleteLesson(next)}
                         isCompleted={enrollment?.completedLessons?.includes(lesson.id)}
                     />
+                ) : lesson.type === 'interview' ? (
+                    <div className="flex flex-col items-center justify-center p-8 border rounded-lg bg-slate-50 text-center space-y-6">
+                        <div className="relative w-32 h-32">
+                            <div className={`absolute inset-0 rounded-full animate-pulse ${enrollment?.completedLessons?.includes(lesson.id) ? 'bg-green-100' : 'bg-blue-100'}`}></div>
+                            <div className="absolute inset-2 bg-white rounded-full flex items-center justify-center shadow-sm">
+                                <img
+                                    src="/assets/techbot/techbot-pfp.png"
+                                    alt="TechBot"
+                                    className="w-24 h-24 object-contain"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2 max-w-md">
+                            <h3 className="text-xl font-semibold">Mock Interview Session</h3>
+                            <p className="text-muted-foreground">
+                                Test your knowledge with a live AI interview.
+                                You need a score of <span className="font-bold text-primary">50% or higher</span> to pass this lesson.
+                            </p>
+                        </div>
+
+                        {/* Score Display */}
+                        {lessonInterviews.length > 0 && (
+                            <div className="w-full max-w-xs bg-white p-4 rounded-lg border shadow-sm">
+                                <div className="text-sm text-muted-foreground mb-1">Best Score</div>
+                                <div className={`text-3xl font-bold ${bestScore >= 50 ? 'text-green-600' : 'text-amber-600'}`}>
+                                    {bestScore}%
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-1">
+                                    {bestScore >= 50 ? 'Passed' : 'Not Passed Yet'}
+                                </div>
+                            </div>
+                        )}
+
+                        {enrollment?.completedLessons?.includes(lesson.id) ? (
+                            <div className="flex flex-col items-center gap-4">
+                                <div className="flex items-center gap-2 text-green-600 bg-green-100 px-4 py-2 rounded-full font-medium">
+                                    <CheckCircle2 className="w-5 h-5" />
+                                    Interview Passed
+                                </div>
+                                <Button
+                                    onClick={handleStartInterview}
+                                    variant="outline"
+                                    className="gap-2"
+                                >
+                                    Practice Again
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col gap-3">
+                                <Button
+                                    onClick={handleStartInterview}
+                                    size="lg"
+                                    className={`gap-2 text-white min-w-[200px] ${bestScore > 0 && bestScore < 50 ? 'bg-amber-600 hover:bg-amber-700' : 'bg-[#354fd2] hover:bg-[#2a3fca]'}`}
+                                >
+                                    {bestScore > 0 && bestScore < 50 ? 'Retake Interview' : 'Start Interview'}
+                                </Button>
+                                {bestScore > 0 && bestScore < 50 && (
+                                    <p className="text-sm text-amber-600 font-medium">
+                                        Don't worry! You can retake the interview as many times as needed.
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 ) : (
                     <article className="prose prose-slate dark:prose-invert lg:prose-lg max-w-none">
                         <ReactMarkdown
@@ -353,6 +456,7 @@ export default function LessonPage() {
                     <Button
                         onClick={() => handleCompleteLesson(next)}
                         className="gap-2 h-auto py-4 px-6 bg-[#354fd2] hover:bg-[#2a3fca] text-white"
+                        disabled={lesson.type === 'interview' && !enrollment?.completedLessons?.includes(lesson.id)}
                     >
                         <div className="text-right">
                             <div className="text-xs text-white/80 mb-1">Next Lesson</div>
@@ -363,14 +467,20 @@ export default function LessonPage() {
                 ) : (
                     <Button
                         onClick={() => handleCompleteLesson(null)}
-                        disabled={lesson.challengeId && challengeProgress?.status !== 'completed'}
-                        className={`gap-2 h-auto py-4 px-6 text-white ${lesson.challengeId && challengeProgress?.status !== 'completed'
+                        disabled={
+                            (lesson.challengeId && challengeProgress?.status !== 'completed') ||
+                            (lesson.type === 'interview' && !enrollment?.completedLessons?.includes(lesson.id))
+                        }
+                        className={`gap-2 h-auto py-4 px-6 text-white ${(lesson.challengeId && challengeProgress?.status !== 'completed') ||
+                            (lesson.type === 'interview' && !enrollment?.completedLessons?.includes(lesson.id))
                             ? "bg-gray-400 cursor-not-allowed"
                             : "bg-green-600 hover:bg-green-700"
                             }`}
                     >
                         {lesson.challengeId && challengeProgress?.status !== 'completed' ? (
                             <span>Complete Challenge First</span>
+                        ) : lesson.type === 'interview' && !enrollment?.completedLessons?.includes(lesson.id) ? (
+                            <span>Pass Interview First</span>
                         ) : (
                             <span>Complete Track</span>
                         )}

@@ -4,6 +4,7 @@ import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/useAuth';
 import { getInterview } from '@/lib/firestore_modules/interviews';
+import { getUserEnrollment, updateUserEnrollment, recordLessonCompletion } from '@/lib/firestore';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Loader2, CheckCircle2, AlertCircle, TrendingUp, ArrowLeft, Sparkles } from 'lucide-react';
@@ -60,6 +61,37 @@ export default function InterviewFeedbackPage({ params }) {
         fetchInterview();
     }, [interviewId, user, authLoading, router]);
 
+    const handleTrackProgress = async (interviewData, feedbackData) => {
+        if (interviewData.type !== 'track_interview' || feedbackData.score < 50) return;
+
+        try {
+            const { userId, trackId, moduleId, lessonId } = interviewData;
+
+            // 1. Record Lesson Completion
+            await recordLessonCompletion(userId, trackId, lessonId, `Interview: ${interviewData.targetRole}`);
+
+            // 2. Update Enrollment
+            const enrollment = await getUserEnrollment(userId, trackId);
+            if (!enrollment) return;
+
+            let updates = {};
+            let updatedCompletedLessons = enrollment.completedLessons || [];
+
+            if (!updatedCompletedLessons.includes(lessonId)) {
+                updatedCompletedLessons = [...updatedCompletedLessons, lessonId];
+                updates.completedLessons = updatedCompletedLessons;
+                updates.lastAccessed = new Date();
+
+                await updateUserEnrollment(enrollment.id, updates);
+                toast.success("Lesson Completed! You passed the interview.");
+            }
+
+        } catch (error) {
+            console.error("Error updating track progress:", error);
+            toast.error("Failed to update track progress");
+        }
+    };
+
     const generateFeedback = async (interviewData) => {
         setGenerating(true);
         try {
@@ -76,6 +108,10 @@ export default function InterviewFeedbackPage({ params }) {
 
             // Update local state to reflect new feedback
             setInterview(prev => ({ ...prev, feedback: data.feedback }));
+
+            // Handle Track Progress
+            await handleTrackProgress(interviewData, data.feedback);
+
         } catch (error) {
             console.error("Error generating feedback:", error);
             toast.error("Failed to generate feedback. Please try again.");
@@ -158,18 +194,54 @@ export default function InterviewFeedbackPage({ params }) {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <Button
-                            variant="ghost"
-                            className="mb-2 pl-0 hover:bg-transparent hover:text-blue-600"
-                            onClick={() => router.push('/dashboard/mock-interviews')}
-                        >
-                            <ArrowLeft className="w-4 h-4 mr-2" />
-                            Back to Dashboard
-                        </Button>
+                        {interview?.type === 'track_interview' ? (
+                            <Button
+                                variant="ghost"
+                                className="mb-2 pl-0 hover:bg-transparent hover:text-blue-600"
+                                onClick={() => router.push(`/dashboard/interview-tracks/${interview.trackId}/modules/${interview.moduleId}/lesson/${interview.lessonId}`)}
+                            >
+                                <ArrowLeft className="w-4 h-4 mr-2" />
+                                Back to Lesson
+                            </Button>
+                        ) : (
+                            <Button
+                                variant="ghost"
+                                className="mb-2 pl-0 hover:bg-transparent hover:text-blue-600"
+                                onClick={() => router.push('/dashboard/mock-interviews')}
+                            >
+                                <ArrowLeft className="w-4 h-4 mr-2" />
+                                Back to Dashboard
+                            </Button>
+                        )}
+
                         <h1 className="text-3xl font-bold text-slate-900 font-playfair">Interview Analysis</h1>
                         <p className="text-slate-500">
                             {interview?.targetRole} • {new Date(interview?.createdAt?.seconds * 1000).toLocaleDateString()}
                         </p>
+
+                        {/* Pass/Fail Message for Track Interviews */}
+                        {interview?.type === 'track_interview' && (
+                            <div className={`mt-4 p-4 rounded-lg border ${feedback.score >= 50 ? 'bg-green-50 border-green-200 text-green-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
+                                <div className="flex items-center gap-2 font-semibold text-lg">
+                                    {feedback.score >= 50 ? (
+                                        <>
+                                            <CheckCircle2 className="w-6 h-6" />
+                                            Congratulations! You passed this lesson.
+                                        </>
+                                    ) : (
+                                        <>
+                                            <AlertCircle className="w-6 h-6" />
+                                            You didn't pass. Retake the interview to complete the lesson.
+                                        </>
+                                    )}
+                                </div>
+                                <p className="mt-1 ml-8 text-sm opacity-90">
+                                    {feedback.score >= 50
+                                        ? "Great job! You can now proceed to the next lesson."
+                                        : "Don't worry, you can try again as many times as you need. Review the feedback below to improve."}
+                                </p>
+                            </div>
+                        )}
                     </div>
                     <div className="flex items-center gap-4">
                         <div className="text-right">

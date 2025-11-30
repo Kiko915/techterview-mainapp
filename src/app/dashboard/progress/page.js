@@ -4,31 +4,17 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { getUserStats } from '@/lib/firestore_modules/stats';
 import { getUserInterviews } from '@/lib/firestore_modules/interviews';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trophy, Flame, Target, Calendar, TrendingUp, Activity, PieChart as PieChartIcon, BarChart as BarChartIcon } from 'lucide-react';
-import {
-    LineChart,
-    Line,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-    RadarChart,
-    PolarGrid,
-    PolarAngleAxis,
-    PolarRadiusAxis,
-    Radar,
-    Legend,
-    BarChart,
-    Bar,
-    PieChart,
-    Pie,
-    Cell
-} from 'recharts';
-import { Loader2 } from 'lucide-react';
+import { TrendingUp, Loader2 } from 'lucide-react';
+
+// Import Modular Components
+import OverviewCards from './components/OverviewCards';
+import PerformanceChart from './components/PerformanceChart';
+import TopicRadarChart from './components/TopicRadarChart';
+import ScoreDistributionChart from './components/ScoreDistributionChart';
+import ActivityPieChart from './components/ActivityPieChart';
+import ActivityHeatmap from './components/ActivityHeatmap';
+import AIProgressAnalysis from './components/AIProgressAnalysis';
 
 export default function ProgressPage() {
     const { user, loading: authLoading } = useAuth();
@@ -43,8 +29,6 @@ export default function ProgressPage() {
     const [activityData, setActivityData] = useState({});
     const [scoreDistribution, setScoreDistribution] = useState([]);
     const [activityBreakdown, setActivityBreakdown] = useState([]);
-
-    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
     useEffect(() => {
         const fetchData = async () => {
@@ -157,48 +141,6 @@ export default function ProgressPage() {
 
     }, [stats, interviews, timeRange]);
 
-    // Heatmap Helper
-    const renderHeatmap = () => {
-        const today = new Date();
-        const oneYearAgo = new Date();
-        oneYearAgo.setFullYear(today.getFullYear() - 1);
-
-        const weeks = [];
-        let currentDate = new Date(oneYearAgo);
-
-        // Align to Sunday
-        currentDate.setDate(currentDate.getDate() - currentDate.getDay());
-
-        while (currentDate <= today) {
-            const week = [];
-            for (let i = 0; i < 7; i++) {
-                const dateStr = currentDate.toISOString().split('T')[0];
-                const count = activityData[dateStr] || 0;
-                let colorClass = "bg-slate-100"; // Default (0)
-                if (count >= 1) colorClass = "bg-green-200";
-                if (count >= 3) colorClass = "bg-green-400";
-                if (count >= 5) colorClass = "bg-green-600";
-                if (count >= 8) colorClass = "bg-green-800";
-
-                week.push(
-                    <div
-                        key={dateStr}
-                        className={`w-3 h-3 rounded-sm ${colorClass}`}
-                        title={`${dateStr}: ${count} activities`}
-                    />
-                );
-                currentDate.setDate(currentDate.getDate() + 1);
-            }
-            weeks.push(<div key={currentDate.toISOString()} className="flex flex-col gap-1">{week}</div>);
-        }
-
-        return (
-            <div className="flex gap-1 overflow-x-auto pb-2">
-                {weeks}
-            </div>
-        );
-    };
-
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -235,202 +177,29 @@ export default function ProgressPage() {
             </div>
 
             {/* Overview Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-none shadow-lg">
-                    <CardContent className="p-6 flex items-center justify-between">
-                        <div>
-                            <p className="text-blue-100 font-medium">Total XP</p>
-                            <h3 className="text-3xl font-bold mt-1">{stats?.totalXP || 0}</h3>
-                        </div>
-                        <div className="p-3 bg-white/20 rounded-xl">
-                            <Trophy className="w-6 h-6 text-white" />
-                        </div>
-                    </CardContent>
-                </Card>
+            <OverviewCards stats={stats} />
 
-                <Card className="bg-gradient-to-br from-orange-500 to-red-500 text-white border-none shadow-lg">
-                    <CardContent className="p-6 flex items-center justify-between">
-                        <div>
-                            <p className="text-orange-100 font-medium">Current Streak</p>
-                            <h3 className="text-3xl font-bold mt-1">{stats?.streak || 0} Days</h3>
-                        </div>
-                        <div className="p-3 bg-white/20 rounded-xl">
-                            <Flame className="w-6 h-6 text-white" />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-slate-200 shadow-sm">
-                    <CardContent className="p-6 flex items-center justify-between">
-                        <div>
-                            <p className="text-slate-500 font-medium">Interviews</p>
-                            <h3 className="text-3xl font-bold text-slate-900 mt-1">{stats?.interviewsCompleted || 0}</h3>
-                        </div>
-                        <div className="p-3 bg-blue-50 rounded-xl">
-                            <Target className="w-6 h-6 text-blue-600" />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-slate-200 shadow-sm">
-                    <CardContent className="p-6 flex items-center justify-between">
-                        <div>
-                            <p className="text-slate-500 font-medium">Challenges</p>
-                            <h3 className="text-3xl font-bold text-slate-900 mt-1">{stats?.challengesCompleted || 0}</h3>
-                        </div>
-                        <div className="p-3 bg-green-50 rounded-xl">
-                            <Activity className="w-6 h-6 text-green-600" />
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+            {/* AI Analysis */}
+            <AIProgressAnalysis user={user} stats={stats} performanceData={performanceData} topicData={topicData} />
 
             <div className="grid lg:grid-cols-3 gap-8">
                 {/* Performance Trend */}
-                <Card className="lg:col-span-2 border-slate-200 shadow-sm">
-                    <CardHeader>
-                        <CardTitle>Performance Trend</CardTitle>
-                        <CardDescription>Your interview scores over the selected period</CardDescription>
-                    </CardHeader>
-                    <CardContent className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={performanceData}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                <XAxis
-                                    dataKey="date"
-                                    stroke="#64748b"
-                                    fontSize={12}
-                                    tickLine={false}
-                                    axisLine={false}
-                                />
-                                <YAxis
-                                    stroke="#64748b"
-                                    fontSize={12}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    domain={[0, 100]}
-                                />
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0' }}
-                                    cursor={{ stroke: '#94a3b8', strokeWidth: 1 }}
-                                />
-                                <Line
-                                    type="monotone"
-                                    dataKey="score"
-                                    stroke="#2563eb"
-                                    strokeWidth={3}
-                                    dot={{ fill: '#2563eb', r: 4, strokeWidth: 2, stroke: '#fff' }}
-                                    activeDot={{ r: 6 }}
-                                />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
+                <PerformanceChart data={performanceData} />
 
                 {/* Topic Breakdown */}
-                <Card className="border-slate-200 shadow-sm">
-                    <CardHeader>
-                        <CardTitle>Topic Mastery</CardTitle>
-                        <CardDescription>Average score by topic</CardDescription>
-                    </CardHeader>
-                    <CardContent className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <RadarChart cx="50%" cy="50%" outerRadius="80%" data={topicData}>
-                                <PolarGrid stroke="#e2e8f0" />
-                                <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 12 }} />
-                                <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                                <Radar
-                                    name="Score"
-                                    dataKey="A"
-                                    stroke="#2563eb"
-                                    fill="#3b82f6"
-                                    fillOpacity={0.5}
-                                />
-                                <Tooltip />
-                            </RadarChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
+                <TopicRadarChart data={topicData} />
             </div>
 
             <div className="grid lg:grid-cols-2 gap-8">
                 {/* Score Distribution */}
-                <Card className="border-slate-200 shadow-sm">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <BarChartIcon className="w-5 h-5 text-slate-500" />
-                            Score Distribution
-                        </CardTitle>
-                        <CardDescription>Frequency of your interview scores</CardDescription>
-                    </CardHeader>
-                    <CardContent className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={scoreDistribution}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                <XAxis dataKey="range" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                                <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
-                                <Tooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ borderRadius: '8px' }} />
-                                <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
+                <ScoreDistributionChart data={scoreDistribution} />
 
                 {/* Activity Breakdown */}
-                <Card className="border-slate-200 shadow-sm">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <PieChartIcon className="w-5 h-5 text-slate-500" />
-                            Activity Breakdown
-                        </CardTitle>
-                        <CardDescription>Distribution of your learning activities</CardDescription>
-                    </CardHeader>
-                    <CardContent className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={activityBreakdown}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={80}
-                                    paddingAngle={5}
-                                    dataKey="value"
-                                >
-                                    {activityBreakdown.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip />
-                                <Legend verticalAlign="bottom" height={36} />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
+                <ActivityPieChart data={activityBreakdown} />
             </div>
 
             {/* Activity Heatmap */}
-            <Card className="border-slate-200 shadow-sm">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Calendar className="w-5 h-5 text-slate-500" />
-                        Activity Log
-                    </CardTitle>
-                    <CardDescription>Your daily contribution activity over the last year</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex items-end gap-2 mb-2 text-xs text-slate-500 justify-end">
-                        <span>Less</span>
-                        <div className="w-3 h-3 bg-slate-100 rounded-sm"></div>
-                        <div className="w-3 h-3 bg-green-200 rounded-sm"></div>
-                        <div className="w-3 h-3 bg-green-400 rounded-sm"></div>
-                        <div className="w-3 h-3 bg-green-600 rounded-sm"></div>
-                        <div className="w-3 h-3 bg-green-800 rounded-sm"></div>
-                        <span>More</span>
-                    </div>
-                    {renderHeatmap()}
-                </CardContent>
-            </Card>
+            <ActivityHeatmap data={activityData} />
         </div>
     );
 }

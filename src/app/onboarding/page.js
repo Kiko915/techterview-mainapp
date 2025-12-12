@@ -34,23 +34,23 @@ export default function OnboardingPage() {
       if (authLoading) {
         return; // Still loading auth state
       }
-      
+
       if (!user) {
         router.push("/auth/login");
         return;
       }
-      
+
       try {
         // Check if user has completed onboarding
         const userProfile = await getUserByUID(user.uid);
-        
+
         if (userProfile && userProfile.onboardingCompleted) {
           // User has already completed onboarding, redirect to dashboard
           console.log("User has already completed onboarding, redirecting to dashboard");
           router.push("/dashboard");
           return;
         }
-        
+
         // User hasn't completed onboarding, allow access to onboarding page
         setCheckingOnboarding(false);
       } catch (error) {
@@ -59,7 +59,7 @@ export default function OnboardingPage() {
         setCheckingOnboarding(false);
       }
     };
-    
+
     checkOnboardingStatus();
   }, [user, authLoading, router]);
 
@@ -69,24 +69,24 @@ export default function OnboardingPage() {
       setUsernameError("");
       return true; // Empty username will be caught by required field validation
     }
-    
+
     // Check username length and format
     if (username.length < 3) {
       setUsernameError("Username must be at least 3 characters long.");
       return false;
     }
-    
+
     if (username.length > 20) {
       setUsernameError("Username must be 20 characters or less.");
       return false;
     }
-    
+
     // Check for valid characters (alphanumeric and underscore only)
     if (!/^[a-zA-Z0-9_]+$/.test(username)) {
       setUsernameError("Username can only contain letters, numbers, and underscores.");
       return false;
     }
-    
+
     setCheckingUsername(true);
     try {
       const result = await checkUsernameAvailability(username, user?.uid);
@@ -107,14 +107,21 @@ export default function OnboardingPage() {
 
   // Validation function to check if all required fields are filled
   const isFormValid = () => {
-    return (
+    const isBasicValid =
       formData.username.trim() !== "" &&
       formData.fullName.trim() !== "" &&
       formData.role !== "" &&
-      formData.skill !== "" &&
-      formData.experienceLevel !== "" &&
       usernameError === "" &&
-      !checkingUsername
+      !checkingUsername;
+
+    if (formData.role === 'recruiter') {
+      return isBasicValid;
+    }
+
+    return (
+      isBasicValid &&
+      formData.skill !== "" &&
+      formData.experienceLevel !== ""
     );
   };
 
@@ -161,12 +168,12 @@ export default function OnboardingPage() {
       ...prev,
       [name]: value
     }));
-    
+
     // Clear validation error when user starts typing
     if (validationError) {
       setValidationError("");
     }
-    
+
     // Validate username on change with debounce
     if (name === 'username') {
       setUsernameError(""); // Clear previous error immediately
@@ -205,7 +212,7 @@ export default function OnboardingPage() {
   const nextStep = async () => {
     // Clear any existing validation errors
     setValidationError("");
-    
+
     // Validate current step before proceeding
     if (currentStep === 2) {
       // Check if basic fields are filled
@@ -213,7 +220,7 @@ export default function OnboardingPage() {
         setValidationError("Please fill in both username and full name.");
         return;
       }
-      
+
       // Validate username format and availability
       const isUsernameValid = await validateUsername(formData.username);
       if (!isUsernameValid) {
@@ -221,9 +228,15 @@ export default function OnboardingPage() {
         return;
       }
     }
-    if (currentStep === 3 && !isStep3Valid()) {
-      setValidationError("Please select your role.");
-      return;
+    if (currentStep === 3) {
+      if (!isStep3Valid()) {
+        setValidationError("Please select your role.");
+        return;
+      }
+      if (formData.role === 'recruiter') {
+        setCurrentStep(6);
+        return;
+      }
     }
     if (currentStep === 4 && !isStep4Valid()) {
       setValidationError("Please select your skill area.");
@@ -233,7 +246,7 @@ export default function OnboardingPage() {
       setValidationError("Please select your experience level.");
       return;
     }
-    
+
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
     }
@@ -241,6 +254,11 @@ export default function OnboardingPage() {
 
   const prevStep = () => {
     if (currentStep > 1) {
+      // If recruiter going back from review (step 6), go back to role selection (step 3)
+      if (currentStep === 6 && formData.role === 'recruiter') {
+        setCurrentStep(3);
+        return;
+      }
       setCurrentStep(currentStep - 1);
     }
   };
@@ -271,10 +289,10 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-screen bg-[#f0f7ff] relative">
       {/* Progress Bar */}
-      <div className="absolute top-0 left-0 h-4 bg-[#354fd2] transition-all duration-300 ease-in-out" 
-           style={{ width: `${getProgressWidth()}%` }}>
+      <div className="absolute top-0 left-0 h-4 bg-[#354fd2] transition-all duration-300 ease-in-out"
+        style={{ width: `${getProgressWidth()}%` }}>
       </div>
-      
+
       {renderStep()}
     </div>
   );
@@ -294,16 +312,16 @@ function Step1({ nextStep }) {
             className="mx-auto"
           />
         </div>
-        
+
         <h1 className="font-playfair font-bold text-5xl text-black mb-6">
           We want to know more.
         </h1>
-        
+
         <p className="text-2xl text-black max-w-2xl mx-auto mb-12 leading-relaxed">
           We will ask some questions related to you, so that we can tailor the platform for you.
         </p>
-        
-        <Button 
+
+        <Button
           onClick={nextStep}
           className="bg-[#354fd2] text-white px-8 py-3 rounded-lg text-sm font-medium hover:bg-[#2a3fa8] transition-colors min-w-[295px]"
         >
@@ -328,15 +346,15 @@ function Step2({ formData, handleInputChange, nextStep, prevStep, validationErro
             className="mx-auto"
           />
         </div>
-        
+
         <h1 className="font-playfair font-bold text-5xl text-black mb-6">
           Basic Information
         </h1>
-        
+
         <p className="text-2xl text-black max-w-2xl mx-auto mb-12 leading-relaxed">
           Tell us a bit about yourself.
         </p>
-        
+
         <div className="space-y-6 mb-12">
           {/* Username Field */}
           <div className="text-left">
@@ -351,11 +369,10 @@ function Step2({ formData, handleInputChange, nextStep, prevStep, validationErro
                 placeholder="JohnDoe17"
                 value={formData.username}
                 onChange={handleInputChange}
-                className={`pl-12 pr-10 h-12 w-full bg-white border rounded-lg ${
-                  usernameError ? 'border-red-300 focus:border-red-500' : 
+                className={`pl-12 pr-10 h-12 w-full bg-white border rounded-lg ${usernameError ? 'border-red-300 focus:border-red-500' :
                   formData.username && !usernameError && !checkingUsername ? 'border-green-300 focus:border-green-500' :
-                  'border-gray-200'
-                }`}
+                    'border-gray-200'
+                  }`}
               />
               {/* Username validation indicator */}
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -370,7 +387,7 @@ function Step2({ formData, handleInputChange, nextStep, prevStep, validationErro
                 )}
               </div>
             </div>
-            
+
             {/* Username validation message */}
             {usernameError && (
               <div className="mt-2 text-sm text-red-600 flex items-center gap-1">
@@ -385,7 +402,7 @@ function Step2({ formData, handleInputChange, nextStep, prevStep, validationErro
               </div>
             )}
           </div>
-          
+
           {/* Full Name Field */}
           <div className="text-left">
             <label className="text-xs font-semibold text-black tracking-wide block mb-2">
@@ -404,7 +421,7 @@ function Step2({ formData, handleInputChange, nextStep, prevStep, validationErro
             </div>
           </div>
         </div>
-        
+
         {/* Validation Error Alert */}
         {validationError && (
           <div className="mb-6">
@@ -416,10 +433,10 @@ function Step2({ formData, handleInputChange, nextStep, prevStep, validationErro
             </Alert>
           </div>
         )}
-        
+
         {/* Navigation Buttons */}
         <div className="flex justify-center gap-4">
-          <Button 
+          <Button
             onClick={prevStep}
             variant="outline"
             className="bg-white/10 border border-gray-300 text-black px-8 py-3 rounded-lg text-sm font-medium min-w-[250px] hover:bg-gray-50"
@@ -427,8 +444,8 @@ function Step2({ formData, handleInputChange, nextStep, prevStep, validationErro
             <ChevronLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          
-          <Button 
+
+          <Button
             onClick={nextStep}
             className="bg-[#354fd2] text-white px-8 py-3 rounded-lg text-sm font-medium hover:bg-[#2a3fa8] transition-colors min-w-[250px]"
           >
@@ -455,32 +472,30 @@ function Step3({ formData, handleRoleSelect, nextStep, prevStep, validationError
             className="mx-auto"
           />
         </div>
-        
+
         <h1 className="font-playfair font-bold text-5xl text-black mb-6">
           What is your role?
         </h1>
-        
+
         <p className="text-2xl text-black max-w-2xl mx-auto mb-12 leading-relaxed">
           Are you a employer looking for employees, or vice-versa?
         </p>
-        
+
         {/* Role Selection Cards */}
         <div className="flex justify-center gap-8 mb-12">
           {/* Recruiter Card */}
-          <div 
+          <div
             onClick={() => handleRoleSelect('recruiter')}
-            className={`cursor-pointer p-8 rounded-xl border-2 transition-all duration-200 w-[270px] h-[139px] flex flex-col items-center justify-center ${
-              formData.role === 'recruiter' 
-                ? 'border-[#354fd2] bg-white' 
-                : 'border-gray-200 bg-white hover:border-gray-300'
-            }`}
+            className={`cursor-pointer p-8 rounded-xl border-2 transition-all duration-200 w-[270px] h-[139px] flex flex-col items-center justify-center ${formData.role === 'recruiter'
+              ? 'border-[#354fd2] bg-white'
+              : 'border-gray-200 bg-white hover:border-gray-300'
+              }`}
           >
             <div className="flex items-center gap-4 mb-2">
-              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                formData.role === 'recruiter' 
-                  ? 'border-[#354fd2]' 
-                  : 'border-gray-300'
-              }`}>
+              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData.role === 'recruiter'
+                ? 'border-[#354fd2]'
+                : 'border-gray-300'
+                }`}>
                 {formData.role === 'recruiter' && (
                   <div className="w-2 h-2 bg-[#354fd2] rounded-full"></div>
                 )}
@@ -491,22 +506,20 @@ function Step3({ formData, handleRoleSelect, nextStep, prevStep, validationError
               Recruiter
             </p>
           </div>
-          
+
           {/* Candidate Card */}
-          <div 
+          <div
             onClick={() => handleRoleSelect('candidate')}
-            className={`cursor-pointer p-8 rounded-xl border-2 transition-all duration-200 w-[270px] h-[139px] flex flex-col items-center justify-center ${
-              formData.role === 'candidate' 
-                ? 'border-[#354fd2] bg-white' 
-                : 'border-gray-200 bg-white hover:border-gray-300'
-            }`}
+            className={`cursor-pointer p-8 rounded-xl border-2 transition-all duration-200 w-[270px] h-[139px] flex flex-col items-center justify-center ${formData.role === 'candidate'
+              ? 'border-[#354fd2] bg-white'
+              : 'border-gray-200 bg-white hover:border-gray-300'
+              }`}
           >
             <div className="flex items-center gap-4 mb-2">
-              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                formData.role === 'candidate' 
-                  ? 'border-[#354fd2]' 
-                  : 'border-gray-300'
-              }`}>
+              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData.role === 'candidate'
+                ? 'border-[#354fd2]'
+                : 'border-gray-300'
+                }`}>
                 {formData.role === 'candidate' && (
                   <div className="w-2 h-2 bg-[#354fd2] rounded-full"></div>
                 )}
@@ -518,7 +531,7 @@ function Step3({ formData, handleRoleSelect, nextStep, prevStep, validationError
             </p>
           </div>
         </div>
-        
+
         {/* Validation Error Alert */}
         {validationError && (
           <div className="mb-6">
@@ -530,10 +543,10 @@ function Step3({ formData, handleRoleSelect, nextStep, prevStep, validationError
             </Alert>
           </div>
         )}
-        
+
         {/* Navigation Buttons */}
         <div className="flex justify-center gap-4">
-          <Button 
+          <Button
             onClick={prevStep}
             variant="outline"
             className="bg-white/10 border border-gray-300 text-black px-8 py-3 rounded-lg text-sm font-medium min-w-[250px] hover:bg-gray-50"
@@ -541,8 +554,8 @@ function Step3({ formData, handleRoleSelect, nextStep, prevStep, validationError
             <ChevronLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          
-          <Button 
+
+          <Button
             onClick={nextStep}
             className="bg-[#354fd2] text-white px-8 py-3 rounded-lg text-sm font-medium hover:bg-[#2a3fa8] transition-colors min-w-[250px]"
           >
@@ -575,15 +588,15 @@ function Step4({ formData, handleInputChange, nextStep, prevStep, validationErro
             className="mx-auto"
           />
         </div>
-        
+
         <h1 className="font-playfair font-bold text-5xl text-black mb-6">
           What is your skill area?
         </h1>
-        
+
         <p className="text-2xl text-black max-w-2xl mx-auto mb-12 leading-relaxed">
           Which area of technology interests you the most?
         </p>
-        
+
         {/* Skill Selection Dropdown */}
         <div className="mb-12">
           <select
@@ -600,7 +613,7 @@ function Step4({ formData, handleInputChange, nextStep, prevStep, validationErro
             ))}
           </select>
         </div>
-        
+
         {/* Validation Error Alert */}
         {validationError && (
           <div className="mb-6">
@@ -612,10 +625,10 @@ function Step4({ formData, handleInputChange, nextStep, prevStep, validationErro
             </Alert>
           </div>
         )}
-        
+
         {/* Navigation Buttons */}
         <div className="flex justify-center gap-4">
-          <Button 
+          <Button
             onClick={prevStep}
             variant="outline"
             className="bg-white/10 border border-gray-300 text-black px-8 py-3 rounded-lg text-sm font-medium min-w-[250px] hover:bg-gray-50"
@@ -623,8 +636,8 @@ function Step4({ formData, handleInputChange, nextStep, prevStep, validationErro
             <ChevronLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          
-          <Button 
+
+          <Button
             onClick={nextStep}
             className="bg-[#354fd2] text-white px-8 py-3 rounded-lg text-sm font-medium hover:bg-[#2a3fa8] transition-colors min-w-[250px]"
           >
@@ -657,33 +670,31 @@ function Step5({ formData, handleExperienceSelect, nextStep, prevStep, validatio
             className="mx-auto"
           />
         </div>
-        
+
         <h1 className="font-playfair font-bold text-5xl text-black mb-6">
           Have any experience?
         </h1>
-        
+
         <p className="text-2xl text-black max-w-2xl mx-auto mb-12 leading-relaxed">
           We don't judge, any experience level whether you are a pro, intermediate, or beginner.
         </p>
-        
+
         {/* Experience Level Selection Cards */}
         <div className="flex justify-center gap-8 mb-12">
           {experienceLevels.map((level) => (
-            <div 
+            <div
               key={level.value}
               onClick={() => handleExperienceSelect(level.value)}
-              className={`cursor-pointer p-8 rounded-xl border-2 transition-all duration-200 w-[270px] h-[139px] flex flex-col items-center justify-center ${
-                formData.experienceLevel === level.value 
-                  ? 'border-[#354fd2] bg-white' 
-                  : 'border-gray-200 bg-white hover:border-gray-300'
-              }`}
+              className={`cursor-pointer p-8 rounded-xl border-2 transition-all duration-200 w-[270px] h-[139px] flex flex-col items-center justify-center ${formData.experienceLevel === level.value
+                ? 'border-[#354fd2] bg-white'
+                : 'border-gray-200 bg-white hover:border-gray-300'
+                }`}
             >
               <div className="flex items-center gap-4 mb-2">
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                  formData.experienceLevel === level.value 
-                    ? 'border-[#354fd2]' 
-                    : 'border-gray-300'
-                }`}>
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData.experienceLevel === level.value
+                  ? 'border-[#354fd2]'
+                  : 'border-gray-300'
+                  }`}>
                   {formData.experienceLevel === level.value && (
                     <div className="w-2 h-2 bg-[#354fd2] rounded-full"></div>
                   )}
@@ -696,7 +707,7 @@ function Step5({ formData, handleExperienceSelect, nextStep, prevStep, validatio
             </div>
           ))}
         </div>
-        
+
         {/* Validation Error Alert */}
         {validationError && (
           <div className="mb-6">
@@ -708,10 +719,10 @@ function Step5({ formData, handleExperienceSelect, nextStep, prevStep, validatio
             </Alert>
           </div>
         )}
-        
+
         {/* Navigation Buttons */}
         <div className="flex justify-center gap-4">
-          <Button 
+          <Button
             onClick={prevStep}
             variant="outline"
             className="bg-white/10 border border-gray-300 text-black px-8 py-3 rounded-lg text-sm font-medium min-w-[250px] hover:bg-gray-50"
@@ -719,8 +730,8 @@ function Step5({ formData, handleExperienceSelect, nextStep, prevStep, validatio
             <ChevronLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          
-          <Button 
+
+          <Button
             onClick={nextStep}
             className="bg-[#354fd2] text-white px-8 py-3 rounded-lg text-sm font-medium hover:bg-[#2a3fa8] transition-colors min-w-[250px]"
           >
@@ -737,14 +748,14 @@ function Step5({ formData, handleExperienceSelect, nextStep, prevStep, validatio
 function Step6({ formData, prevStep, user, router, loading, setLoading, isFormValid }) {
   const handleFinish = async () => {
     if (!user) return;
-    
+
     // Validate all fields before proceeding
     if (!isFormValid()) {
       // The button should already be disabled, but this is a safety check
       console.warn("Attempted to submit incomplete form");
       return;
     }
-    
+
     setLoading(true);
     try {
       // Update user profile with onboarding data
@@ -757,7 +768,7 @@ function Step6({ formData, prevStep, user, router, loading, setLoading, isFormVa
         profileComplete: true,
         onboardingCompleted: true
       });
-      
+
       console.log("Onboarding completed successfully!");
       // Redirect to dashboard
       router.push("/dashboard");
@@ -782,15 +793,15 @@ function Step6({ formData, prevStep, user, router, loading, setLoading, isFormVa
             className="mx-auto"
           />
         </div>
-        
+
         <h1 className="font-playfair font-bold text-5xl text-black mb-6">
           Review
         </h1>
-        
+
         <p className="text-2xl text-black max-w-2xl mx-auto mb-12 leading-relaxed">
           Kindly review all your answers so that we can cater the right tools for you.
         </p>
-        
+
         {/* Review Cards */}
         <div className="space-y-6 mb-12">
           {/* Basic Information Review */}
@@ -807,7 +818,7 @@ function Step6({ formData, prevStep, user, router, loading, setLoading, isFormVa
               </p>
             </div>
           </div>
-          
+
           {/* Role & Experience Review */}
           <div className="bg-white border border-gray-200 rounded-xl p-6 text-left">
             <h3 className="text-lg font-semibold text-black mb-4">Role & Experience</h3>
@@ -816,18 +827,23 @@ function Step6({ formData, prevStep, user, router, loading, setLoading, isFormVa
                 <span className="font-medium">Role:</span> {formData.role === 'candidate' ? 'Candidate' : formData.role === 'recruiter' ? 'Recruiter' : 'Not selected'}
                 {formData.role === "" && <span className="text-red-500 ml-2">*Required</span>}
               </p>
-              <p className={`${formData.skill === "" ? "text-red-600" : "text-gray-600"}`}>
-                <span className="font-medium">Skill:</span> {formData.skill || "Not selected"}
-                {formData.skill === "" && <span className="text-red-500 ml-2">*Required</span>}
-              </p>
-              <p className={`${formData.experienceLevel === "" ? "text-red-600" : "text-gray-600"}`}>
-                <span className="font-medium">Experience Level:</span> {formData.experienceLevel || "Not selected"}
-                {formData.experienceLevel === "" && <span className="text-red-500 ml-2">*Required</span>}
-              </p>
+
+              {formData.role === 'candidate' && (
+                <>
+                  <p className={`${formData.skill === "" ? "text-red-600" : "text-gray-600"}`}>
+                    <span className="font-medium">Skill:</span> {formData.skill || "Not selected"}
+                    {formData.skill === "" && <span className="text-red-500 ml-2">*Required</span>}
+                  </p>
+                  <p className={`${formData.experienceLevel === "" ? "text-red-600" : "text-gray-600"}`}>
+                    <span className="font-medium">Experience Level:</span> {formData.experienceLevel || "Not selected"}
+                    {formData.experienceLevel === "" && <span className="text-red-500 ml-2">*Required</span>}
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </div>
-        
+
         {/* Validation Message */}
         {!isFormValid() && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-center">
@@ -836,10 +852,10 @@ function Step6({ formData, prevStep, user, router, loading, setLoading, isFormVa
             </p>
           </div>
         )}
-        
+
         {/* Navigation Buttons */}
         <div className="flex justify-center gap-4">
-          <Button 
+          <Button
             onClick={prevStep}
             variant="outline"
             className="bg-white/10 border border-gray-300 text-black px-8 py-3 rounded-lg text-sm font-medium min-w-[250px] hover:bg-gray-50"
@@ -847,8 +863,8 @@ function Step6({ formData, prevStep, user, router, loading, setLoading, isFormVa
             <ChevronLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          
-          <Button 
+
+          <Button
             onClick={handleFinish}
             disabled={loading || !isFormValid()}
             className="bg-[#354fd2] text-white px-8 py-3 rounded-lg text-sm font-medium hover:bg-[#2a3fa8] transition-colors min-w-[250px] disabled:opacity-50"

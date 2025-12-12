@@ -86,6 +86,23 @@ export const getUserByEmail = async (email) => {
     }
 };
 
+export const getUsersByRole = async (role) => {
+    try {
+        const q = query(usersCollection, where('role', '==', role));
+        const querySnapshot = await getDocs(q);
+
+        const users = [];
+        querySnapshot.forEach((doc) => {
+            users.push({ id: doc.id, ...doc.data() });
+        });
+
+        return users;
+    } catch (error) {
+        console.error(`Error getting users by role ${role}:`, error);
+        throw error;
+    }
+};
+
 export const checkUsernameAvailability = async (username, excludeUID = null) => {
     try {
         console.log('Checking username availability for:', username);

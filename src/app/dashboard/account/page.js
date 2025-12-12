@@ -18,7 +18,7 @@ export default function AccountPage() {
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [countries, setCountries] = useState([]);
-  
+
   // Edit Profile Dialog States
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
@@ -74,7 +74,7 @@ export default function AccountPage() {
       try {
         const response = await fetch('https://restcountries.com/v3.1/all?fields=name,flags');
         const data = await response.json();
-        const sortedCountries = data.sort((a, b) => 
+        const sortedCountries = data.sort((a, b) =>
           a.name.common.localeCompare(b.name.common)
         );
         setCountries(sortedCountries);
@@ -96,12 +96,12 @@ export default function AccountPage() {
 
   const handlePasswordUpdate = async (e) => {
     e.preventDefault();
-    
+
     if (!user?.uid || !user?.email) {
       toast.error("User not authenticated. Please try again.");
       return;
     }
-    
+
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       toast.error("New passwords don't match!");
       return;
@@ -111,13 +111,13 @@ export default function AccountPage() {
       toast.error("New password must be at least 8 characters long!");
       return;
     }
-    
+
     // Check password strength
     const hasLowercase = /[a-z]/.test(passwordData.newPassword);
     const hasUppercase = /[A-Z]/.test(passwordData.newPassword);
     const hasNumbers = /\d/.test(passwordData.newPassword);
     const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(passwordData.newPassword);
-    
+
     if (!hasLowercase || !hasUppercase || !hasNumbers) {
       toast.error("Password must contain at least one lowercase letter, one uppercase letter, and one number!");
       return;
@@ -128,10 +128,10 @@ export default function AccountPage() {
       // Reauthenticate user first
       const credential = EmailAuthProvider.credential(user.email, passwordData.currentPassword);
       await reauthenticateWithCredential(auth.currentUser, credential);
-      
+
       // Update password
       await updatePassword(auth.currentUser, passwordData.newPassword);
-      
+
       toast.success("Password updated successfully!");
       setPasswordData({
         currentPassword: "",
@@ -161,7 +161,7 @@ export default function AccountPage() {
       ...prev,
       [field]: value
     }));
-    
+
     // Clear username error when user starts typing
     if (field === 'username') {
       setUsernameError('');
@@ -206,12 +206,12 @@ export default function AccountPage() {
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!user?.uid) {
       toast.error("User not authenticated. Please try again.");
       return;
     }
-    
+
     if (!editFormData.displayName.trim() || !editFormData.username.trim()) {
       toast.error("Display name and username are required!");
       return;
@@ -242,7 +242,7 @@ export default function AccountPage() {
         skill: editFormData.skill,
         experienceLevel: editFormData.experienceLevel
       });
-      
+
       // Refresh user profile
       const updatedProfile = await getUserByUID(user.uid);
       setUserProfile(updatedProfile);
@@ -284,10 +284,10 @@ export default function AccountPage() {
       photoURL: newImageUrl
     };
     setUserProfile(updatedProfile);
-    
+
     // Emit profile update event for other components (like TopNavbar)
     emitProfileUpdate(updatedProfile);
-    
+
     // Optionally refetch the user profile to ensure consistency
     if (user?.uid) {
       try {
@@ -339,11 +339,12 @@ export default function AccountPage() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <AccountSidebar 
-          activeTab={activeTab} 
-          setActiveTab={setActiveTab} 
+        <AccountSidebar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          userRole={userProfile?.role}
         />
-        
+
         {/* Main Content */}
         <div className="lg:col-span-3">
           {activeTab === 'personal' && (
@@ -382,8 +383,8 @@ export default function AccountPage() {
           )}
 
           {activeTab === 'achievements' && (
-            <AchievementsTab 
-              achievements={achievements} 
+            <AchievementsTab
+              achievements={achievements}
             />
           )}
         </div>

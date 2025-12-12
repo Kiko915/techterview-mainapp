@@ -134,10 +134,71 @@ const navSections = [
   },
 ];
 
+const recruiterNavSections = [
+  {
+    title: "Dashboard",
+    items: [
+      {
+        title: "Overview",
+        url: "/dashboard",
+        icon: Home,
+        description: "Your main dashboard"
+      },
+    ]
+  },
+  {
+    title: "Recruitment",
+    items: [
+      {
+        title: "Candidates",
+        url: "/dashboard/candidates",
+        icon: User,
+        description: "Find top talent"
+      },
+    ]
+  },
+  {
+    title: "Account",
+    items: [
+      {
+        title: "Notifications",
+        url: "/dashboard/notifications",
+        icon: Bell,
+        description: "Your notifications"
+      },
+      {
+        title: "Settings",
+        url: "/dashboard/settings",
+        icon: Settings,
+        description: "Account settings"
+      },
+    ]
+  },
+];
+
 function AppSidebar() {
   const pathname = usePathname();
   const { state } = useSidebar();
   const isCollapsed = state === 'collapsed';
+  const { user } = useAuth();
+  const [userProfile, setUserProfile] = useState(null);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (user) {
+        try {
+          const profile = await getUserByUID(user.uid);
+          setUserProfile(profile);
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+        }
+      }
+    };
+
+    fetchUserProfile();
+  }, [user]);
+
+  const activeNavSections = userProfile?.role === 'recruiter' ? recruiterNavSections : navSections;
 
   return (
     <Sidebar collapsible="icon" className="border-r border-gray-200 bg-gradient-to-b from-gray-50 to-white">
@@ -175,7 +236,7 @@ function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className={`${isCollapsed ? 'px-0 py-3' : 'px-3 py-4'}`}>
-        {navSections.map((section, sectionIndex) => (
+        {activeNavSections.map((section, sectionIndex) => (
           <SidebarGroup key={section.title} className={sectionIndex > 0 ? (isCollapsed ? 'mt-3' : 'mt-4') : ''}>
             {!isCollapsed && (
               <SidebarGroupLabel className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-3 mb-2">
@@ -227,7 +288,7 @@ function AppSidebar() {
                 })}
               </SidebarMenu>
             </SidebarGroupContent>
-            {!isCollapsed && sectionIndex < navSections.length - 1 && (
+            {!isCollapsed && sectionIndex < activeNavSections.length - 1 && (
               <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent mx-3 mt-3"></div>
             )}
           </SidebarGroup>
@@ -356,13 +417,42 @@ function TopNavbar() {
   const userName = userProfile?.displayName || userProfile?.username || user?.email?.split('@')[0] || 'User';
   const userInitials = userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
+  const [customPageTitle, setCustomPageTitle] = useState(null);
+
+  // Fetch candidate name for title when on candidate profile page
+  useEffect(() => {
+    const fetchCandidateName = async () => {
+      // Check if we are on a candidate detail page: /dashboard/candidates/[id]
+      const match = pathname.match(/^\/dashboard\/candidates\/([^/]+)$/);
+      if (match) {
+        const candidateId = match[1];
+        try {
+          const candidateData = await getUserByUID(candidateId);
+          if (candidateData) {
+            setCustomPageTitle(candidateData.displayName || candidateData.username || "Candidate Profile");
+          }
+        } catch (error) {
+          console.error("Error fetching candidate name for title:", error);
+          setCustomPageTitle("Candidate Profile");
+        }
+      } else {
+        setCustomPageTitle(null);
+      }
+    };
+
+    fetchCandidateName();
+  }, [pathname]);
+
   // Function to get page title based on current path
   const getPageTitle = () => {
+    if (customPageTitle) return customPageTitle;
+
     if (pathname === '/dashboard') return 'Overview';
     if (pathname === '/dashboard/coding-challenge') return 'Coding Challenge';
     if (pathname === '/dashboard/mock-interviews') return 'Mock Interviews';
     if (pathname === '/dashboard/ai-mentor') return 'AI Mentor';
     if (pathname === '/dashboard/interview-tracks') return 'Interview Tracks';
+    if (pathname === '/dashboard/candidates') return 'Candidates';
     if (pathname === '/dashboard/progress') return 'Progress';
     if (pathname === '/dashboard/notifications') return 'Notifications';
     if (pathname === '/dashboard/settings') return 'Settings';

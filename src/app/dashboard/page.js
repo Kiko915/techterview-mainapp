@@ -23,7 +23,10 @@ import {
   ArrowRight,
   PlayCircle,
   BookOpen,
-  Zap
+  Zap,
+  Briefcase,
+  User,
+  ExternalLink
 } from "lucide-react";
 import { useAuth } from "@/lib/useAuth";
 import {
@@ -60,8 +63,19 @@ export default function DashboardPage() {
       if (user) {
         try {
           setLoading(true);
-          const [profile, userStats, userEnrollments, nextLesson, allChallenges, completedIds] = await Promise.all([
-            getUserByUID(user.uid),
+          // First fetch user profile to determine role
+          const profile = await getUserByUID(user.uid);
+          setUserProfile(profile);
+
+          if (profile?.role === 'recruiter') {
+            // For recruiters, we don't need candidate stats
+            // We could fetch recent candidates or job postings here in the future
+            setLoading(false);
+            return;
+          }
+
+          // Fetch candidate specific data
+          const [userStats, userEnrollments, nextLesson, allChallenges, completedIds] = await Promise.all([
             getUserStats(user.uid),
             getUserEnrollments(user.uid),
             getNextLessonForUser(user.uid),
@@ -69,7 +83,6 @@ export default function DashboardPage() {
             getUserCompletedChallenges(user.uid)
           ]);
 
-          setUserProfile(profile);
           if (userStats) setStats(userStats);
           if (userEnrollments) setEnrollments(userEnrollments);
 
@@ -109,6 +122,125 @@ export default function DashboardPage() {
 
   if (loading) {
     return <DashboardSkeleton />;
+  }
+
+  if (userProfile?.role === 'recruiter') {
+    return (
+      <div>
+        <div className="p-6">
+          <Card className="bg-gradient-to-r from-[#2c3e50] to-[#4ca1af] text-white border-0 shadow-lg rounded-2xl overflow-hidden relative">
+            <DottedGlowBackground
+              className="pointer-events-none opacity-25"
+              opacity={1}
+              gap={15}
+              radius={2}
+              color="rgba(255, 255, 255, 0.3)"
+              glowColor="rgba(173, 216, 230, 0.8)"
+              backgroundOpacity={0}
+              speedMin={0.1}
+              speedMax={0.6}
+              speedScale={0.3}
+            />
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-8 hidden md:block z-20">
+              <Image
+                src="/logo/techterview_symbol_colored.png"
+                alt="TechTerview Background"
+                width={180}
+                height={180}
+                className="object-contain filter brightness-200"
+              />
+            </div>
+            <CardContent className="p-8 relative z-30">
+              <div className="space-y-2">
+                <p className="text-white/80 text-sm font-medium">{greeting},</p>
+                <h1 className="text-3xl font-bold">{userName}!</h1>
+                <p className="text-white/90 text-base mt-3 max-w-md">
+                  Find the best tech talent for your company.
+                </p>
+                <div className="mt-6">
+                  <Link href="/dashboard/candidates">
+                    <Button className="bg-white text-[#2c3e50] hover:bg-gray-100 font-semibold">
+                      Browse Candidates <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="px-6 pb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card className="bg-white border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <User className="h-5 w-5 text-[#354fd2]" />
+                  Find Candidates
+                </CardTitle>
+                <CardDescription>Search and filter potential candidates.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Link href="/dashboard/candidates" className="text-sm text-blue-600 font-medium hover:underline">
+                  Go to Candidates List
+                </Link>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white border-0 shadow-sm opacity-60">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Briefcase className="h-5 w-5 text-gray-400" />
+                  Post a Job
+                </CardTitle>
+                <CardDescription>Create new job listings.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Badge variant="outline">Coming Soon</Badge>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* TrabaHanap Promo Section - Only for Recruiters */}
+        <div className="px-6 pb-6 pt-12">
+          <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-[#354fd2] to-[#2a3bb0] shadow-xl shrink-0">
+            <div className="absolute top-0 right-0 -mt-16 -mr-16 opacity-10">
+              <Briefcase className="w-64 h-64 text-white transform rotate-12" />
+            </div>
+
+            <div className="relative p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-8">
+              <div className="space-y-3 text-center md:text-left md:max-w-lg">
+                <h3 className="text-2xl md:text-3xl font-bold text-white font-playfair">
+                  Need more qualified applicants?
+                </h3>
+                <p className="text-blue-100 text-lg leading-relaxed">
+                  Expand your search with our partner platform. TrabaHanap connects you with a vast network of skilled professionals.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-6">
+                <div className="bg-white p-4 rounded-xl shadow-lg w-48 h-20 relative flex items-center justify-center">
+                  <Image
+                    src="/logo/TrabaHanap-Brandname.svg"
+                    alt="TrabaHanap"
+                    width={180}
+                    height={60}
+                    className="object-contain"
+                  />
+                </div>
+                <Button
+                  onClick={() => window.open('https://trabahanap.dev', '_blank')}
+                  className="h-14 px-8 text-lg bg-white text-[#354fd2] hover:bg-blue-50 font-bold shadow-lg transition-transform hover:scale-105"
+                >
+                  Visit TrabaHanap
+                  <ExternalLink className="ml-2 h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

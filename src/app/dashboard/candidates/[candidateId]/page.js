@@ -66,8 +66,9 @@ export default function CandidateProfilePage() {
         setIsModalOpen(true);
     };
 
-    const handleVerifyCertificate = (url) => {
-        if (url) {
+    const handleVerifyCertificate = (certId) => {
+        if (certId && typeof window !== 'undefined') {
+            const url = `${window.location.origin}/verify/${certId}`;
             window.open(url, '_blank');
         }
     };
@@ -248,7 +249,7 @@ export default function CandidateProfilePage() {
                                                 <Button
                                                     size="sm"
                                                     className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white shadow-sm"
-                                                    onClick={() => handleVerifyCertificate(cert.verificationUrl)}
+                                                    onClick={() => handleVerifyCertificate(cert.id)}
                                                 >
                                                     <CheckCircle className="h-3.5 w-3.5 mr-2" />
                                                     Verify
@@ -402,7 +403,7 @@ export default function CandidateProfilePage() {
                         </Button>
                         <Button
                             className="bg-green-600 hover:bg-green-700 text-white gap-2"
-                            onClick={() => selectedCertificate && handleVerifyCertificate(selectedCertificate.verificationUrl)}
+                            onClick={() => selectedCertificate && handleVerifyCertificate(selectedCertificate.id)}
                         >
                             <ExternalLink className="h-4 w-4" />
                             Verify Authenticity

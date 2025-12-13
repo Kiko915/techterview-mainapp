@@ -68,7 +68,7 @@ export default function CandidateProfilePage() {
 
     const handleVerifyCertificate = (certId) => {
         if (certId && typeof window !== 'undefined') {
-            const url = `${window.location.origin}/verify/${certId}`;
+            const url = `https://app.techterview.dev/verify/${certId}`;
             window.open(url, '_blank');
         }
     };
